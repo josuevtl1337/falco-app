@@ -1,0 +1,114 @@
+/* App.css — minimal v4 */
+html, body, #root { height: 100%; }
+
+@import "tailwindcss";
+/* @import "tw-animate-css";  opcional */
+
+/* ===== 1) Tokens de TU app (HSL numérico) ===== */
+:root {
+  /* Base */
+  --background: 0 0% 100%; /* blanco */
+  --foreground: 0 0% 12%; /* texto gris muy oscuro */
+
+  /* Superficies */
+  --card: 0 0% 100%;
+  --card-foreground: var(--foreground);
+
+  /* Acciones */
+  --primary: 106 42% 56%; /* tu verde #74BD5E */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 96%; /* gris muy claro para superficies secundarias */
+  --secondary-foreground: 0 0% 20%;
+
+  /* UI */
+  --border: 220 13% 91%; /* gris de bordes estándar */
+  --input: var(--border);
+  --ring: var(--primary);
+
+  /* Opcional pero útil para shadcn */
+  --radius: 0.75rem; /* 12px — bordes redondeados base */
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 12%;
+
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 40%;
+}
+
+/* Dark mode minimal */
+.dark {
+  --background: 0 0% 7%; /* #121212 aprox */
+  --foreground: 0 0% 98%;
+
+  --card: 0 0% 9%;
+  --card-foreground: var(--foreground);
+
+  --primary: 106 42% 56%;
+  --primary-foreground: 0 0% 10%;
+
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 96%;
+
+  --border: 0 0% 18%;
+  --input: var(--border);
+  --ring: var(--primary);
+
+  --popover: 0 0% 9%;
+  --popover-foreground: 0 0% 96%;
+
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 70%;
+}
+
+/* ===== 2) Mapear a Tailwind v4 (lo que usan bg-*, text-*, border-*) ===== */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+}
+
+/* ===== 3) Base mínima para que todo “agarre” ===== */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 
+FONTS */
+
+@font-face {
+  font-family: "FalcoLogo";
+  src: url("/src/assets/fonts/StoryScript-Regular.ttf") format("truetype");
+  font-weight:800;
+  font-style:normal;
+  font-display:swap;
+}
+
+.logo-font {
+  font-family: "FalcoLogo", system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+}
