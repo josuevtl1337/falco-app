@@ -8,3 +8,5 @@ dist/
 .vscode/
 src-tauri/target/
 src-tauri/.cargo/
+
+backend/node_modules/
