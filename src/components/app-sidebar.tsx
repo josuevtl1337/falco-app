@@ -43,7 +43,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       },
       {
         title: "Salon",
-        url: RoutePaths.hall,
+        url: RoutePaths.createOrder,
         icon: IconListDetails,
       },
       {

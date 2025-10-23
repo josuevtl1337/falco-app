@@ -5,14 +5,15 @@ import { Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { formatARS } from "@/modules/commons/utils/helpers";
-import { IMenuItem as Product } from "./../../../../backend/models/MenuModel";
+import { OrderProduct } from "@/modules/hall";
 
 function ProductCard({
   product,
   onSelect,
 }: {
-  product: Product;
-  onSelect?: (p: Product) => void;
+  product: OrderProduct;
+  onSelect?: (p: OrderProduct) => void;
+  onUpdateQty?: (productId: string, qty: number) => void;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -21,15 +22,18 @@ function ProductCard({
       role="button"
       onClick={() => onSelect?.(product)}
       className={cn(
-        "group relative flex flex-col justify-between rounded-2xl border-2 border-[var(--primary-foreground)] p-6 shadow-lg transition-all hover:scale-[1.02] cursor-pointer",
+        "bg-[var(--card-background)] group relative flex flex-col justify-between rounded-2xl border-1 border-[var(--card-border)] p-4 shadow-lg transition-all hover:scale-[1.02] cursor-pointer",
         "hover:shadow-2xl hover:border-[var(--primary)] active:scale-[0.98]",
         product.is_active === 0 ? "opacity-60 grayscale" : ""
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <CardTitle className="text-2xl leading-7 font-bold text-[var(--primary-text)]">
-            {product.name}
+          <CardTitle className="text-xl leading-7 font-bold text-[var(--primary-text)]">
+            {/* {product.name} */}
+            {product.name.length > 15
+              ? product.name.slice(0, 15) + "..."
+              : product.name}
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge
@@ -46,19 +50,17 @@ function ProductCard({
             ) : null}
           </div>
         </div>
-        <div className="text-right">
+      </div>
+
+      <div className="mt-4 flex flex-col items-start justify-between gap-2">
+        <div className="text-start">
           <div className="text-3xl font-extrabold tabular-nums text-[var(--primary-text)]">
             {formatARS(product.price)}
           </div>
-          {/* {!product.isAvailable && (
-            <div className="text-[11px] text-muted-foreground">
-              No disponible
-            </div>
-          )} */}
         </div>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          Tocar para seleccionar
+        </span>
         <Button
           size="sm"
           variant="outline"
@@ -74,9 +76,6 @@ function ProductCard({
           <Copy className="mr-2 h-4 w-4" />{" "}
           {copied ? "Copiado" : "Copiar código"}
         </Button>
-        <span className="text-xs text-muted-foreground">
-          Tocar para seleccionar
-        </span>
       </div>
     </Card>
   );
