@@ -1,47 +1,124 @@
+import { useMemo } from "react";
+import { OrderStateData } from "../..";
 import Banquets from "./banquets";
 import TableWithChairs from "./tables";
 
-function HallPage() {
+interface IHallPageProps {
+  onChangeSeat: (id: string) => void;
+  onChangeShift: (shift: string) => void;
+  orders: OrderStateData[];
+}
+
+// Hall disposal
+// Banquets
+const banquets = [
+  { id: "B1", label: "B1" },
+  { id: "B2", label: "B2" },
+  { id: "B3", label: "B3" },
+  { id: "B4", label: "B4" },
+  { id: "B5", label: "B5" },
+  { id: "B6", label: "B6" },
+];
+
+const tables = [
+  { id: "M1", label: "Mesa 1", seats: 2 },
+  { id: "M2", label: "Mesa 2", seats: 2 },
+  { id: "M3", label: "Mesa 3", seats: 2 },
+  { id: "M4", label: "Mesa 4", seats: 4 },
+];
+const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, orders }) => {
+  // useMemo evita recalcular en cada render
+  const activeBanquetIds = useMemo(
+    () => new Set(orders.map(o => o.table_number)),
+    [orders]
+  );
+
+  const mappedBanquets = useMemo(
+    () =>
+      banquets.map(b => ({
+        ...b,
+        hasOrder: activeBanquetIds.has(b.id),
+      })),
+    [banquets, activeBanquetIds]
+  );
+
+  const mappedTables = useMemo(
+    () =>
+      tables.map(b => ({
+        ...b,
+        hasOrder: activeBanquetIds.has(b.id),
+      })),
+    [tables, activeBanquetIds]
+  );
+
   return (
     <div className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
-      <div className="font-bold text-lg mb-4 text-white">Salón</div>
+      <div>
+        <div className="flex flex-row justify-between">
+          <div className="font-bold text-lg mb-4 text-white">Turno:</div>
+          <select defaultValue={'morning'} onChange={(event) => onChangeShift(event.target.value)} name={'shifts'} id={"shift-select"} className="bg-[#181c1f] border border-[var(--card-border)] rounded-lg px-4 py-2 text-white">
+            <option value='morning'>Mañana</option>
+            <option value="afternoon" >Tarde</option>
+          </select>
+        </div>
+      </div>
+
+
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex flex-row gap-24">
           {/* Banquetas */}
-          <div className="flex flex-col items-start bg-[#043d4c] rounded-xl p-4 min-w-[120px]">
-            <div className="text-sm font-semibold mb-4 text-white">
+          <div className="flex flex-col items-start bg-[#043d4c] rounded-xl p-2 min-w-[80px]">
+            <div className="text-sm font-semibold text-white">
               Banquetas
             </div>
-            <div className="flex flex-col gap-3 w-full">
-              <Banquets label="7" />
-              <Banquets label="8" />
-              <Banquets label="9" />
-              <Banquets label="10" />
-              <Banquets label="11" />
-              <Banquets label="12" />
+            <div className="flex flex-col w-full">
+              {mappedBanquets.map((banquet) => (
+                <Banquets
+                  key={banquet.id}
+                  label={banquet.label}
+                  isClickable
+                  onClick={onChangeSeat}
+                  hasOrder={banquet.hasOrder}
+                />
+              ))}
             </div>
           </div>
-          {/* Mesas */}
-          <div className="flex flex-col flex-1 items-center justify-between py-24">
-            <TableWithChairs seats={2} label="Mesa 1" />
-            <TableWithChairs seats={2} label="Mesa 2" />
-          </div>
-        </div>
 
-        <div className="flex justify-start ml-18">
-          <TableWithChairs seats={4} label="Mesa 3" />
+          {/* Mesas */}
+          <div className="flex flex-col flex-1 items-center justify-between pt-12">
+            {mappedTables.map((table) => {
+              if (table.id === 'M4') return null;
+              return (
+                <div key={table.id} className="flex justify-center w-full mb-12">
+                  <TableWithChairs
+                    seats={table.seats}
+                    label={table.label}
+                    onClick={onChangeSeat}
+                    hasOrder={table.hasOrder}
+                    id={table.id}
+                  />
+                </div>
+              )
+            })}
+          </div>
+
         </div>
-        {/* Selector y botón */}
-        <div className="flex items-center justify-between mt-8">
-          <select className="bg-[#181c1f] border border-[var(--card-border)] rounded-lg px-4 py-2 text-white">
-            <option>Mesa 1</option>
-            <option>Mesa 2</option>
-            <option>Mesa 3</option>
-          </select>
-          <button className="bg-[var(--primary)] text-white font-semibold px-6 py-2 rounded-lg ml-4">
-            Nueva orden
-          </button>
-        </div>
+      </div>
+
+      <div className="flex justify-start ml-12 mt-24">
+        <TableWithChairs seats={4} label="M4" onClick={onChangeSeat} />
+      </div>
+      {/* Selector y botón */}
+      <div className="flex items-center justify-between mt-8">
+        <select className="bg-[#181c1f] border border-[var(--card-border)] rounded-lg px-4 py-2 text-white">
+          <option>Mesa 1</option>
+          <option>Mesa 2</option>
+          <option>Mesa 3</option>
+          <option>Take Away</option>
+        </select>
+        <button className="bg-[var(--primary)] text-white font-semibold px-6 py-2 rounded-lg ml-4">
+          Comandar
+        </button>
       </div>
     </div>
   );

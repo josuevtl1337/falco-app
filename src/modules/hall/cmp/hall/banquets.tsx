@@ -1,12 +1,27 @@
-export default function Banquets({ label = "" }: { label?: string }) {
+import { FC } from "react";
+
+// export default function Banquets({ label = "" }: { label?: string }, onChangeSeat?: (id: string) => void, isClickable = false) {
+interface IBanquetsProps {
+  label?: string;
+  onClick?: (id: string) => void;
+  isClickable?: boolean;
+  hasOrder?: boolean;
+}
+
+const Banquets: FC<IBanquetsProps> = (props) => {
+  const { label = "", onClick, isClickable = false, hasOrder = "false" } = props;
   return (
-    <div className="flex flex-col m-2">
+    <div className="flex flex-col m-1">
       <div
-        className="hover:scale-[1.02] cursor-pointer w-16 h-16 self-start bg-[var(--banquets-background)] 
+        onClick={() => { isClickable && onClick ? onClick(label) : undefined }}
+        className="hover:scale-[1.02] cursor-pointer w-12 h-12 self-start bg-[var(--banquets-background)] 
         rounded-full  flex items-center justify-center hover:border-2"
+        style={{ borderColor: hasOrder ? 'var(--primary)' : 'transparent' }}
       >
         <p className={"text-md"}>{label}</p>
       </div>
     </div>
   );
 }
+
+export default Banquets;

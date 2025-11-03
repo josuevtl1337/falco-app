@@ -70,4 +70,55 @@ db.prepare(
   `
 ).run();
 
+// Tabla de métodos de pago
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS payment_methods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla principal de órdenes
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_number INTEGER,
+    shift TEXT CHECK (shift IN ('morning','afternoon')) NOT NULL,
+    status TEXT CHECK (status IN ('open','paid','cancelled')) DEFAULT 'open',
+    discount_percentage REAL DEFAULT 0,
+    total_amount REAL NOT NULL,
+    payment_method_id INTEGER REFERENCES payment_methods(id),
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla de items de la orden (productos en la orden)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    menu_item_id INTEGER REFERENCES menu_items(id),
+    quantity REAL NOT NULL,
+    unit_price REAL NOT NULL,
+    subtotal REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(order_id, menu_item_id)
+  )
+`).run();
+
+// Insertar métodos de pago básicos
+db.prepare(`
+  INSERT OR IGNORE INTO payment_methods (name) 
+  VALUES 
+    ('Efectivo'),
+    ('Tarjeta de débito'),
+    ('Tarjeta de crédito'),
+    ('Transferencia'),
+    ('QR')
+`).run();
+
+
 export default db;
