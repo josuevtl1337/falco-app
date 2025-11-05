@@ -117,7 +117,6 @@ function AddProduct(props: Props) {
         return response.json();
       })
       .then((newProduct) => {
-        console.log("Product added successfully:", newProduct);
         form.reset();
       })
       .catch((error) => {

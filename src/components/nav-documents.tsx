@@ -20,7 +20,6 @@ export function NavDocuments({
     icon: Icon;
   }[];
 }) {
-  console.log(items);
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Backoffice</SidebarGroupLabel>

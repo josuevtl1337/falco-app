@@ -7,14 +7,14 @@ interface Props {
   onBack?: () => void;
   orders?: OrderStateData[];
   tableSelected?: string;
-  getOrderById?: (id: string) => void;
+  viewCommand?: () => void;
 }
 
 function CreateOrderState(props: Props) {
-  const { onBack, onCreate, orders, getOrderById, tableSelected } = props;
+  const { onBack, onCreate, orders, viewCommand, tableSelected } = props;
 
   const activeBanquetIds = useMemo(
-    () => orders && new Set(orders.map(o => o.table_number)),
+    () => orders && new Set(orders.map((o) => o.table_number)),
     [orders]
   );
 
@@ -33,19 +33,21 @@ function CreateOrderState(props: Props) {
         <div className="h-[70vh] w-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-row justify-start items-start gap-6">
           {hasOrder ? (
             <div
-              onClick={() => getOrderById && getOrderById(tableSelected)}
+              onClick={() => viewCommand && viewCommand()}
               className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
             >
               <Plus />
-              <h1 className="text-md">Ver comanda</h1>
+              <h1 className="text-md">Editar comanda</h1>
             </div>
-          ) : (<div
-            onClick={onCreate}
-            className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
-          >
-            <Plus />
-            <h1 className="text-md">Comandar</h1>
-          </div>)}
+          ) : (
+            <div
+              onClick={onCreate}
+              className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
+            >
+              <Plus />
+              <h1 className="text-md">Comandar</h1>
+            </div>
+          )}
 
           {/* <div
             onClick={onCreate}
@@ -55,13 +57,15 @@ function CreateOrderState(props: Props) {
             <h1 className="text-md">Modificar Comanda</h1>
           </div> */}
 
-          {hasOrder && <div
-            onClick={onCreate}
-            className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
-          >
-            <CreditCard />
-            <h1 className="text-md">Cobrar</h1>
-          </div>}
+          {hasOrder && (
+            <div
+              onClick={onCreate}
+              className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
+            >
+              <CreditCard />
+              <h1 className="text-md">Cobrar</h1>
+            </div>
+          )}
         </div>
       </div>
     </main>

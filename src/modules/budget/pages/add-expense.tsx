@@ -108,8 +108,6 @@ function AddExpense(props: Props) {
   ];
 
   const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    console.log("Form Data:", data);
-
     fetch("http://localhost:3001/api/expenses/add-expense", {
       method: "POST",
       headers: {
@@ -123,8 +121,7 @@ function AddExpense(props: Props) {
         }
         return response.json();
       })
-      .then((newExpense) => {
-        console.log("Product added successfully:", newExpense);
+      .then(() => {
         form.reset();
       })
       .catch((error) => {

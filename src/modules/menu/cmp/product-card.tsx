@@ -67,7 +67,7 @@ function ProductCard({
           className="rounded-xl border-blue-200 dark:border-gray-700"
           onClick={(e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(product.slug).then(() => {
+            navigator.clipboard.writeText(product.slug || "").then(() => {
               setCopied(true);
               setTimeout(() => setCopied(false), 1200);
             });

@@ -1,13 +1,22 @@
-import { IMenuItem } from "backend/models/MenuModel";
-import { OrderProduct } from "../..";
+import { Button } from "@/components/ui/button";
 
+interface selectedProduct {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+  // options?: string[];
+}
 interface Props {
-  selectedProducts: OrderProduct[];
+  selectedProducts: selectedProduct[];
   onUpdateProductQty: (productId: string, qty: number) => void;
+  onPay: () => void;
+  onCommand: () => void;
+  isReadyToPay: boolean;
   onRemoveProduct?: (productId: string) => void;
   onClearProducts?: () => void;
-  onCommand: () => void;
   onChangeSeat?: () => void;
+  onSave?: () => void;
 }
 
 function SelectedProducts(props: Props) {
@@ -17,7 +26,9 @@ function SelectedProducts(props: Props) {
     onRemoveProduct,
     onClearProducts,
     onCommand,
-    onChangeSeat,
+    isReadyToPay,
+    onPay,
+    onSave,
   } = props;
 
   const subtotal = selectedProducts.reduce(
@@ -31,12 +42,13 @@ function SelectedProducts(props: Props) {
         <span className="font-semibold text-lg">
           Orden para <span className="font-bold">Mesa 3</span>
         </span>
-        <button
+        <Button
+          variant={"link"}
           onClick={onClearProducts}
-          className="text-sm text-[var(--primary)] hover:underline"
+          className="text-sm text-[var(--info)] hover:underline"
         >
           Limpiar
-        </button>
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto flex flex-col gap-4">
         {selectedProducts.map((prod, idx) => (
@@ -50,42 +62,34 @@ function SelectedProducts(props: Props) {
                 ${prod.price.toLocaleString()}
               </span>
             </div>
-            {/* {prod.options && (
-              <div className="flex gap-2 text-xs text-gray-400">
-                {prod.options.map((opt) => (
-                  <span key={opt} className="bg-gray-800 px-2 py-0.5 rounded">
-                    {opt}
-                  </span>
-                ))}
-              </div>
-            )} */}
             {/* cantidad */}
             <div className="flex items-center gap-2 mt-1">
-              <button
+              <Button
                 className="w-7 h-7 rounded bg-gray-700 text-white flex items-center justify-center text-lg font-bold hover:bg-gray-600 transition"
                 onClick={() => onUpdateProductQty(prod.id, prod.qty - 1)}
                 disabled={prod.qty <= 1}
                 aria-label="Disminuir cantidad"
               >
                 −
-              </button>
+              </Button>
               <span className="min-w-[32px] text-center text-base font-semibold bg-gray-800 text-white rounded px-2 py-1 select-none">
                 {prod.qty}
               </span>
-              <button
+              <Button
                 onClick={() => onUpdateProductQty(prod.id, prod.qty + 1)}
                 className="w-7 h-7 rounded bg-gray-700 text-white flex items-center justify-center text-lg font-bold hover:bg-gray-600 transition"
                 aria-label="Aumentar cantidad"
               >
                 +
-              </button>
+              </Button>
               {onRemoveProduct && (
-                <button
+                <Button
+                  variant={"link"}
                   onClick={() => onRemoveProduct(prod.id)}
                   className="ml-auto text-xs text-red-400 hover:underline"
                 >
                   Eliminar
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex justify-end text-sm text-gray-400">
@@ -112,13 +116,35 @@ function SelectedProducts(props: Props) {
           <span>Total</span>
           <span>${subtotal.toLocaleString()}</span>
         </div>
+
+        {/* {isReadyToPay && (
+          <PaymentSection subtotal={subtotal} isReadyToPay={isReadyToPay} />
+        )} */}
         <div className="flex gap-2 mt-4">
-          <button className="flex-1 py-2 rounded bg-gray-700 text-white font-semibold">
+          <Button
+            variant={"secondary"}
+            disabled={selectedProducts.length === 0}
+            onClick={onSave}
+            className="flex-1 py-2 rounded bg-gray-700 text-white font-semibold hover:brightness-150 hover:bg-gray-700"
+          >
             Guardar
-          </button>
-          <button onClick={onCommand} className="cursor-pointer flex-1 py-2 rounded bg-[var(--primary)] text-white font-semibold">
-            Comandar
-          </button>
+          </Button>
+          {isReadyToPay ? (
+            <Button
+              onClick={onPay}
+              className="cursor-pointer flex-1 py-2 rounded bg-[var(--pay)] text-white font-semibold"
+            >
+              Cobrar
+            </Button>
+          ) : (
+            <Button
+              onClick={onCommand}
+              disabled={selectedProducts.length === 0}
+              className="cursor-pointer flex-1 py-2 rounded bg-[var(--primary)] text-white font-semibold"
+            >
+              Comandar
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -2,15 +2,15 @@ import db from "../db.ts";
 
 export interface IMenuItem {
   id: string;
-  slug: string;
+  slug?: string;
   name: string;
   description?: string;
   price: number;
-  is_active: number;
-  created_at: string;
+  is_active?: number;
+  created_at?: string;
   updated_at?: string;
-  category_id: string;
-  category_name: string;
+  category_id?: string;
+  category_name?: string;
 }
 
 class MenuModel {

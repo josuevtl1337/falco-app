@@ -79,7 +79,6 @@ function CalibrationTab() {
     fetch("http://localhost:3001/api/calibration/get-coffees")
       .then((res) => res.json())
       .then((data) => {
-        console.log("data ejejej", data);
         setCoffes(data);
       });
   };
@@ -108,8 +107,6 @@ function CalibrationTab() {
     ];
 
   function onSubmit(data: FormValues) {
-    console.log("Form Data:", data);
-
     const coffeeId = Number(data.coffee_id);
 
     const payload = {

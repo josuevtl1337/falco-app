@@ -45,6 +45,9 @@ html, body, #root { height: 100%; }
   --card-foreground: var(--foreground);
 
   --primary: #74bd5e;
+  --pay: rgb(219, 177, 38);
+  --warning: rgb(219, 138, 38);
+  --info: rgb(38, 162, 219);
   --primary-foreground: #1a1a1a;
 
   --secondary: #262626;

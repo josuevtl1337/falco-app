@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { OrderStateData } from "../..";
 import Banquets from "./banquets";
 import TableWithChairs from "./tables";
+import { Button } from "@/components/ui/button";
+import { Sun, SunMoon } from "lucide-react";
 
 interface IHallPageProps {
   onChangeSeat: (id: string) => void;
@@ -21,21 +23,28 @@ const banquets = [
 ];
 
 const tables = [
-  { id: "M1", label: "Mesa 1", seats: 2 },
-  { id: "M2", label: "Mesa 2", seats: 2 },
-  { id: "M3", label: "Mesa 3", seats: 2 },
-  { id: "M4", label: "Mesa 4", seats: 4 },
+  { id: "M1", label: "Mesa 1", seats: 0 },
+  { id: "M2", label: "Mesa 2", seats: 0 },
+  { id: "M3", label: "Mesa 3", seats: 0 },
+  { id: "M4", label: "Mesa 4", seats: 0 },
 ];
-const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, orders }) => {
-  // useMemo evita recalcular en cada render
+const HallPage: React.FC<IHallPageProps> = ({
+  onChangeSeat,
+  onChangeShift,
+  orders,
+}) => {
+  const [shiftLocal, setShiftLocal] = useState<"morning" | "afternoon">(
+    "morning"
+  );
+
   const activeBanquetIds = useMemo(
-    () => new Set(orders.map(o => o.table_number)),
+    () => new Set(orders.map((o) => o.table_number)),
     [orders]
   );
 
   const mappedBanquets = useMemo(
     () =>
-      banquets.map(b => ({
+      banquets.map((b) => ({
         ...b,
         hasOrder: activeBanquetIds.has(b.id),
       })),
@@ -44,7 +53,7 @@ const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, order
 
   const mappedTables = useMemo(
     () =>
-      tables.map(b => ({
+      tables.map((b) => ({
         ...b,
         hasOrder: activeBanquetIds.has(b.id),
       })),
@@ -53,24 +62,62 @@ const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, order
 
   return (
     <div className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
-      <div>
-        <div className="flex flex-row justify-between">
-          <div className="font-bold text-lg mb-4 text-white">Turno:</div>
-          <select defaultValue={'morning'} onChange={(event) => onChangeShift(event.target.value)} name={'shifts'} id={"shift-select"} className="bg-[#181c1f] border border-[var(--card-border)] rounded-lg px-4 py-2 text-white">
-            <option value='morning'>Mañana</option>
-            <option value="afternoon" >Tarde</option>
-          </select>
+      <div className="flex flex-row justify-between">
+        <div className="flex items-center gap-4 justify-between w-full">
+          <div className="text-lg text-white font-light">
+            {`Turno: `}{" "}
+            <span className="text-sm font-medium text-[var(--info)]">
+              {shiftLocal === "morning" ? "Mañana" : "Tarde"}
+            </span>
+          </div>
+
+          <div className="inline-flex rounded-lg border border-[var(--card-border)] bg-[#0f1315] p-1">
+            <Button
+              type="button"
+              variant={"secondary"}
+              onClick={() => {
+                setShiftLocal("morning");
+                onChangeShift("morning");
+              }}
+              className={
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition " +
+                (shiftLocal === "morning"
+                  ? "bg-[var(--foreground)] text-black"
+                  : "text-gray-300 hover:bg-[rgba(255,255,255,0.02)]")
+              }
+              aria-pressed={shiftLocal === "morning"}
+              title="Mañana"
+            >
+              <Sun />
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                setShiftLocal("afternoon");
+                onChangeShift("afternoon");
+              }}
+              variant={"secondary"}
+              className={
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition " +
+                (shiftLocal === "afternoon"
+                  ? "bg-[var(--foreground)] text-black"
+                  : "text-gray-300 hover:bg-[rgba(255,255,255,0.02)]")
+              }
+              aria-pressed={shiftLocal === "afternoon"}
+              title="Tarde"
+            >
+              <SunMoon />
+            </Button>
+          </div>
         </div>
       </div>
-
 
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex flex-row gap-24">
           {/* Banquetas */}
           <div className="flex flex-col items-start bg-[#043d4c] rounded-xl p-2 min-w-[80px]">
-            <div className="text-sm font-semibold text-white">
-              Banquetas
-            </div>
+            <div className="text-sm font-semibold text-white">Banquetas</div>
             <div className="flex flex-col w-full">
               {mappedBanquets.map((banquet) => (
                 <Banquets
@@ -87,9 +134,12 @@ const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, order
           {/* Mesas */}
           <div className="flex flex-col flex-1 items-center justify-between pt-12">
             {mappedTables.map((table) => {
-              if (table.id === 'M4') return null;
+              if (table.id === "M4") return null;
               return (
-                <div key={table.id} className="flex justify-center w-full mb-12">
+                <div
+                  key={table.id}
+                  className="flex justify-center w-full mb-12"
+                >
                   <TableWithChairs
                     seats={table.seats}
                     label={table.label}
@@ -98,30 +148,17 @@ const HallPage: React.FC<IHallPageProps> = ({ onChangeSeat, onChangeShift, order
                     id={table.id}
                   />
                 </div>
-              )
+              );
             })}
           </div>
-
         </div>
       </div>
 
       <div className="flex justify-start ml-12 mt-24">
         <TableWithChairs seats={4} label="M4" onClick={onChangeSeat} />
       </div>
-      {/* Selector y botón */}
-      <div className="flex items-center justify-between mt-8">
-        <select className="bg-[#181c1f] border border-[var(--card-border)] rounded-lg px-4 py-2 text-white">
-          <option>Mesa 1</option>
-          <option>Mesa 2</option>
-          <option>Mesa 3</option>
-          <option>Take Away</option>
-        </select>
-        <button className="bg-[var(--primary)] text-white font-semibold px-6 py-2 rounded-lg ml-4">
-          Comandar
-        </button>
-      </div>
     </div>
   );
-}
+};
 
 export default HallPage;
