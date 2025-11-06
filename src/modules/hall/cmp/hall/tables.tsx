@@ -6,12 +6,14 @@ export default function TableWithChairs({
   label = "",
   id = "",
   onClick,
+  activeSeat,
 }: {
   seats?: number;
   label?: string;
   onClick?: (id: string) => void;
   hasOrder?: boolean;
   id?: string;
+  activeSeat?: string;
 }) {
   const positions =
     seats === 2
@@ -29,7 +31,9 @@ export default function TableWithChairs({
         onClick={() => onClick && onClick(id)}
         className={`z-10 hover:scale-[1.03] transition-transform w-18 h-18 ${
           hasOrder ? "bg-green-400" : "bg-gray-400"
-        } flex items-center justify-center mx-auto my-auto border-gray-600 text-xs font-bold text-black hover:brightness-150 rounded-lg shadow-lg`}
+        }
+        ${activeSeat === id ? "border-2 border-white" : ""}
+         flex items-center justify-center mx-auto my-auto text-xs font-bold text-black hover:brightness-150 rounded-lg shadow-lg`}
       >
         {label}
       </div>

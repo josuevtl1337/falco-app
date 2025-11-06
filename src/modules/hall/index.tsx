@@ -176,9 +176,10 @@ function OrdersPage() {
 
   const onPay = useCallback(
     async (paymentData: PaymentData) => {
-      console.log("currentOrder", currentOrder?.id);
       if (!currentOrder) return;
       const body = {
+        ...currentOrder,
+        status: "paid",
         payment_method_id: paymentData.paymentMethod.id,
         discount_percentage: paymentData.discountValue,
         total_amount: paymentData.total_amount,
@@ -190,12 +191,12 @@ function OrdersPage() {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
-              body: JSON.stringify(body),
             },
+            body: JSON.stringify(body),
           }
         );
         if (!res.ok) throw new Error("Network response was not ok");
-        toast.success("Se ha cobrado exitosamente :) ");
+        toast.success("¡Cachiiinnn! ☕💰 ");
         setSeat("");
         setCurrentOrder(null);
         await getAllOrders();
@@ -209,11 +210,7 @@ function OrdersPage() {
   const onEditCommand = useCallback(async () => {
     if (!currentOrder) return;
     const body = {
-      id: currentOrder.id,
-      table_number: currentOrder.table_number,
-      shift: currentOrder.shift,
-      status: currentOrder.status,
-      discount_percentage: currentOrder.discount_percentage || 0,
+      ...currentOrder,
       total_amount: computeSubtotal(currentOrder.items),
       items: currentOrder.items.map((p) => ({
         product_id: p.menu_item_id,
@@ -222,6 +219,8 @@ function OrdersPage() {
         subtotal: p.subtotal,
       })),
     };
+
+    console.log("body", body);
     try {
       const res = await fetch(
         `http://localhost:3001/api/orders/${currentOrder.id}`,
@@ -326,34 +325,36 @@ function OrdersPage() {
         onChangeSeat={onChangeSteat}
         onChangeShift={setShift}
         orders={orders}
+        activeSeat={seat}
       />
+      {seat && (
+        <>
+          <div className="h-full overflow-auto">{renderCurrentState()}</div>
 
-      <div className="h-full overflow-auto">{renderCurrentState()}</div>
-
-      <div className="h-full overflow-auto">
-        {seat && (
-          <SelectedProducts
-            selectedProducts={
-              currentOrder
-                ? currentOrder.items.map((item) => ({
-                    id: item.menu_item_id,
-                    qty: item.quantity,
-                    name: item.menu_item_name,
-                    price: item.unit_price,
-                    subtotal: item.subtotal,
-                  })) || []
-                : []
-            }
-            onUpdateProductQty={updateProductQty}
-            onRemoveProduct={removeProduct}
-            onClearProducts={clearProducts}
-            isReadyToPay={currentOrder?.status === "open" || false}
-            onCommand={onCommand}
-            onSave={onEditCommand}
-            onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
-          />
-        )}
-      </div>
+          <div className="h-full overflow-auto">
+            <SelectedProducts
+              selectedProducts={
+                currentOrder
+                  ? currentOrder.items.map((item) => ({
+                      id: item.menu_item_id,
+                      qty: item.quantity,
+                      name: item.menu_item_name,
+                      price: item.unit_price,
+                      subtotal: item.subtotal,
+                    })) || []
+                  : []
+              }
+              onUpdateProductQty={updateProductQty}
+              onRemoveProduct={removeProduct}
+              onClearProducts={clearProducts}
+              isReadyToPay={currentOrder?.status === "open" || false}
+              onCommand={onCommand}
+              onSave={onEditCommand}
+              onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

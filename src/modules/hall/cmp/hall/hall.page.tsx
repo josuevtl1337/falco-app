@@ -9,6 +9,7 @@ interface IHallPageProps {
   onChangeSeat: (id: string) => void;
   onChangeShift: (shift: string) => void;
   orders: OrderStateData[];
+  activeSeat: string;
 }
 
 // Hall disposal
@@ -32,6 +33,7 @@ const HallPage: React.FC<IHallPageProps> = ({
   onChangeSeat,
   onChangeShift,
   orders,
+  activeSeat,
 }) => {
   const [shiftLocal, setShiftLocal] = useState<"morning" | "afternoon">(
     "morning"
@@ -126,6 +128,7 @@ const HallPage: React.FC<IHallPageProps> = ({
                   isClickable
                   onClick={onChangeSeat}
                   hasOrder={banquet.hasOrder}
+                  activeSeat={activeSeat}
                 />
               ))}
             </div>
@@ -146,6 +149,7 @@ const HallPage: React.FC<IHallPageProps> = ({
                     onClick={onChangeSeat}
                     hasOrder={table.hasOrder}
                     id={table.id}
+                    activeSeat={activeSeat}
                   />
                 </div>
               );
@@ -155,7 +159,14 @@ const HallPage: React.FC<IHallPageProps> = ({
       </div>
 
       <div className="flex justify-start ml-12 mt-24">
-        <TableWithChairs seats={4} label="M4" onClick={onChangeSeat} />
+        <TableWithChairs
+          seats={4}
+          label="Mesa 4"
+          id="M4"
+          onClick={onChangeSeat}
+          activeSeat={activeSeat}
+          hasOrder={activeBanquetIds.has("M4")}
+        />
       </div>
     </div>
   );

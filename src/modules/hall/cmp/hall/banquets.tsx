@@ -6,20 +6,25 @@ interface IBanquetsProps {
   onClick?: (id: string) => void;
   isClickable?: boolean;
   hasOrder?: boolean;
+  activeSeat?: string;
 }
 
 const Banquets: FC<IBanquetsProps> = (props) => {
-  const { label = "", onClick, isClickable = false } = props;
+  const { label = "", onClick, isClickable = false, activeSeat } = props;
+  //const [active, setActive] = useState(false);
+
   return (
     <div className="flex flex-col m-1">
       <div
         onClick={() => {
-          isClickable && onClick ? onClick(label) : undefined;
+          isClickable && onClick && onClick(label);
         }}
         className={`hover:scale-[1.02] cursor-pointer w-12 h-12 self-start bg-[var(--banquets-background)] 
         rounded-full  flex items-center justify-center ${
           isClickable ? "hover:brightness-125 shadow-md" : ""
-        }`}
+        }
+        ${activeSeat === label ? "border-2 border-white" : ""}
+        `}
       >
         <p className={"text-md"}>{label}</p>
       </div>

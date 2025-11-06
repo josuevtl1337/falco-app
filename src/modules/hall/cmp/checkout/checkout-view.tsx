@@ -21,8 +21,6 @@ export default function CheckoutView({
 }) {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
 
-  console.log("paymentData", paymentData);
-
   return (
     <div className="h-full w-full flex items-start justify-center">
       <div className="max-w-5xl w-full grid lg:grid-cols-3 gap-6 p-6">

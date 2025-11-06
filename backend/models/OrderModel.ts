@@ -91,7 +91,9 @@ export const OrderModel = {
           const parsed = JSON.parse(row.items);
           if (Array.isArray(parsed)) {
             parsedItems = parsed.map((it: any) => ({
-              product_id: Number(it.menu_item_id ?? it.product_id ?? it.menu_item),
+              product_id: Number(
+                it.menu_item_id ?? it.product_id ?? it.menu_item
+              ),
               name: it.menu_item_name ?? it.name ?? null,
               quantity: Number(it.quantity ?? 0),
               unit_price: Number(it.unit_price ?? 0),
@@ -176,37 +178,39 @@ export const OrderModel = {
       WHERE id = ?
     `
       )
-      .run(order.status, order.payment_method_id, order.discount_percentage, order.total_amount, order.id);
+      .run(
+        order.status,
+        order.payment_method_id,
+        order.discount_percentage,
+        order.total_amount,
+        order.id
+      );
   },
 
   updateOrder: (order: Order) => {
     const { items, id, ...orderData } = order;
     if (!id) throw new Error("Order ID is required for update");
     return db.transaction(() => {
-      db
-        .prepare(
-          `
-        UPDATE orders SET
-          table_number = ?,
-          shift = ?,
-          status = ?,
-          discount_percentage = ?,
-          total_amount = ?,
-          payment_method_id = ?,
-          notes = ?
-        WHERE id = ?
-      `
-        )
-        .run(
-          orderData.table_number,
-          orderData.shift,
-          orderData.status,
-          orderData.discount_percentage || 0,
-          orderData.total_amount,
-          orderData.payment_method_id,
-          orderData.notes,
-          id
-        );
+      // db.prepare(
+      //   `
+      //   UPDATE orders SET
+      //     shift = ?,
+      //     status = ?,
+      //     discount_percentage = ?,
+      //     total_amount = ?,
+      //     payment_method_id = ?,
+      //     notes = ?
+      //   WHERE id = ?
+      // `
+      // ).run(
+      //   orderData.table_number,
+      //   orderData.shift,
+      //   orderData.status,
+      //   orderData.discount_percentage || 0,
+      //   orderData.total_amount,
+      //   orderData.payment_method_id,
+      //   orderData.notes
+      // );
       db.prepare(`DELETE FROM order_items WHERE order_id = ?`).run(id);
 
       items.forEach((item) => {
@@ -231,5 +235,5 @@ export const OrderModel = {
 
   getPaymentMethods: () => {
     return db.prepare(`SELECT * FROM payment_methods`).all();
-  }
+  },
 };

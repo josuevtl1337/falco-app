@@ -1,4 +1,3 @@
-
 import { OrderModel, type Order } from "../models/OrderModel.ts";
 import type { Response, Request } from "express";
 
@@ -8,7 +7,9 @@ class OrderController {
 
     try {
       if (!payload || !payload.items || !Array.isArray(payload.items)) {
-        return res.status(400).json({ success: false, message: "Invalid payload: items required" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid payload: items required" });
       }
 
       const orderId = OrderModel.create(payload);
@@ -22,42 +23,41 @@ class OrderController {
         payload,
       });
     }
-  };
+  }
 
   public async getAllOrders(_req: Request, res: Response) {
     try {
       const orders = OrderModel.getAll();
-      res.json(orders);      
+      res.json(orders);
     } catch (error: any) {
       return res.status(500).json({
         success: false,
         message: error?.message || "Internal server error",
-        stack: error?.stack
+        stack: error?.stack,
       });
     }
-  };
+  }
 
   public async updateOrderStatus(req: Request, res: Response) {
     try {
       const payload = req.body && req.body.body ? req.body.body : req.body;
-
       const result = OrderModel.updateStatus(payload);
+
       if (!result.changes) {
-        return res.status(404).json({ error: "Order not found" });
+        return res.status(404).json({ error: "No changes has been made" });
       }
       res.json({ message: "Order status updated" });
     } catch (error) {
       res.status(500).json({ error: "Error updating order status" });
     }
-  };
+  }
 
   public async updateOrder(req: Request, res: Response) {
     const payload = req.body && req.body.body ? req.body.body : req.body;
     try {
       const updatedOrder = OrderModel.updateOrder(payload);
       res.json({ success: true, updatedOrder });
-    }
-    catch (error: any) {
+    } catch (error: any) {
       console.error("Error updating order:", error);
       return res.status(500).json({
         success: false,
@@ -66,20 +66,20 @@ class OrderController {
         payload,
       });
     }
-  };
+  }
 
   public async getPaymentMethods(_req: Request, res: Response) {
     try {
       const paymentMethods = OrderModel.getPaymentMethods();
-      res.json(paymentMethods);      
+      res.json(paymentMethods);
     } catch (error: any) {
       return res.status(500).json({
         success: false,
         message: error?.message || "Internal server error",
-        stack: error?.stack
+        stack: error?.stack,
       });
-    } 
-  };
-};
+    }
+  }
+}
 
 export default new OrderController();

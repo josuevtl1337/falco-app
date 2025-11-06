@@ -5,8 +5,8 @@
   "main": "db.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.ts",
-    "dev": "nodemon --exec ts-node server.ts"
+    "dev": "nodemon --exec \"npx tsx server.ts\"",
+    "start": "npx tsx server.ts"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +23,10 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.2"
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }
