@@ -1,5 +1,5 @@
 import { OrderStateData } from "@/modules/hall";
-import { ArrowLeft, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, CreditCard, Plus, Printer } from "lucide-react";
 import { useMemo } from "react";
 
 interface Props {
@@ -8,10 +8,20 @@ interface Props {
   orders?: OrderStateData[];
   tableSelected?: string;
   viewCommand?: () => void;
+  onPrint: () => void;
+  onPay: () => void;
 }
 
 function CreateOrderState(props: Props) {
-  const { onBack, onCreate, orders, viewCommand, tableSelected } = props;
+  const {
+    onBack,
+    onCreate,
+    orders,
+    viewCommand,
+    tableSelected,
+    onPay,
+    onPrint,
+  } = props;
 
   const activeBanquetIds = useMemo(
     () => orders && new Set(orders.map((o) => o.table_number)),
@@ -37,7 +47,7 @@ function CreateOrderState(props: Props) {
               className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
             >
               <Plus />
-              <h1 className="text-md">Editar comanda</h1>
+              <h1 className="text-md">Modificar comanda</h1>
             </div>
           ) : (
             <div
@@ -49,17 +59,17 @@ function CreateOrderState(props: Props) {
             </div>
           )}
 
-          {/* <div
-            onClick={onCreate}
+          <div
+            onClick={onPrint}
             className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
           >
-            <Pen />
-            <h1 className="text-md">Modificar Comanda</h1>
-          </div> */}
+            <Printer />
+            <h1 className="text-md">Imprimir Ticket</h1>
+          </div>
 
           {hasOrder && (
             <div
-              onClick={onCreate}
+              onClick={onPay}
               className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
             >
               <CreditCard />

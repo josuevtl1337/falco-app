@@ -10,6 +10,7 @@ export default function CheckoutView({
   discount,
   onClose,
   onConfirm,
+  onPrint,
 }: {
   orderLabel: string;
   items: LineItem[];
@@ -18,6 +19,7 @@ export default function CheckoutView({
   total: number;
   onClose: () => void;
   onConfirm: (paymentData: PaymentData) => Promise<void>;
+  onPrint: () => void;
 }) {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
 
@@ -53,8 +55,8 @@ export default function CheckoutView({
 
               <div className="flex gap-2 mt-4">
                 <Button
-                  onClick={onClose}
-                  disabled
+                  onClick={onPrint}
+                  disabled={!paymentData}
                   className="flex-1 py-2 rounded bg-gray-700 text-white font-semibold cursor-pointer"
                 >
                   Imprimir ticket

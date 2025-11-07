@@ -5,6 +5,7 @@ import ExpensesRouter from "./routers/ExpensesRouter.ts";
 import CalibrationRouter from "./routers/CalibrationRouter.ts";
 import MenuRouter from "./routers/MenuRouter.ts";
 import OrderRouter from "./routers/OrderRouter.ts";
+import PrintRouter from "./routers/PrintRouter.ts";
 
 const app = express();
 app.use(cors());
@@ -15,6 +16,7 @@ app.use("/api", ExpensesRouter);
 app.use("/api", CalibrationRouter);
 app.use("/api", MenuRouter );
 app.use("/api", OrderRouter);
+app.use("/api", PrintRouter);
 
 const PORT = 3001;
 app.listen(PORT, () => {

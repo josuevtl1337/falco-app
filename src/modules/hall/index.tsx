@@ -150,7 +150,7 @@ function OrdersPage() {
       discount_percentage: currentOrder.discount_percentage || 0,
       total_amount: computeSubtotal(currentOrder.items),
       items: currentOrder.items.map((p) => ({
-        product_id: p.menu_item_id,
+        menu_item_id: p.menu_item_id,
         quantity: p.quantity,
         unit_price: p.unit_price,
         subtotal: p.subtotal,
@@ -167,6 +167,7 @@ function OrdersPage() {
       const data = await res.json();
       toast.info("Se ha generado la comanda");
       setOrders((prev) => [...prev, data.newOrder]);
+      console.log("data.newOrder", data.newOrder);
       setCurrentOrder(data.newOrder);
       handleStateChange(OrderState.CREATE_ORDER);
     } catch (err) {
@@ -213,7 +214,7 @@ function OrdersPage() {
       ...currentOrder,
       total_amount: computeSubtotal(currentOrder.items),
       items: currentOrder.items.map((p) => ({
-        product_id: p.menu_item_id,
+        menu_item_id: p.menu_item_id,
         quantity: p.quantity,
         unit_price: p.unit_price,
         subtotal: p.subtotal,
@@ -238,6 +239,33 @@ function OrdersPage() {
     }
   }, [currentOrder]);
 
+  const onPrint = useCallback(async () => {
+    if (!currentOrder) return;
+
+    const body = {
+      ...currentOrder,
+      items: currentOrder.items.map((p) => ({
+        menu_item_id: p.menu_item_id,
+        menu_item_name: p.menu_item_name,
+        quantity: p.quantity,
+        unit_price: p.unit_price,
+        subtotal: p.subtotal,
+      })),
+    };
+    try {
+      const response = await fetch("http://localhost:3001/api/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch FE");
+      }
+    } catch (error) {
+      console.error("Error printing order:", error);
+    }
+  }, [currentOrder]);
+
   const renderCurrentState = () => {
     switch (state) {
       case OrderState.CREATE_ORDER:
@@ -247,6 +275,8 @@ function OrdersPage() {
             tableSelected={seat}
             onCreate={() => handleStateChange(OrderState.PICK_MENU)}
             viewCommand={viewCommand}
+            onPrint={onPrint}
+            onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
           />
         );
       case OrderState.PICK_MENU:
@@ -279,6 +309,7 @@ function OrdersPage() {
             total={currentOrder.total_amount}
             onClose={() => handleStateChange(OrderState.CREATE_ORDER)}
             onConfirm={onPay}
+            onPrint={onPrint}
           />
         );
       default:

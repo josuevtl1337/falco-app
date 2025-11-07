@@ -10,8 +10,13 @@ interface IBanquetsProps {
 }
 
 const Banquets: FC<IBanquetsProps> = (props) => {
-  const { label = "", onClick, isClickable = false, activeSeat } = props;
-  //const [active, setActive] = useState(false);
+  const {
+    label = "",
+    onClick,
+    isClickable = false,
+    activeSeat,
+    hasOrder,
+  } = props;
 
   return (
     <div className="flex flex-col m-1">
@@ -24,6 +29,7 @@ const Banquets: FC<IBanquetsProps> = (props) => {
           isClickable ? "hover:brightness-125 shadow-md" : ""
         }
         ${activeSeat === label ? "border-2 border-white" : ""}
+        ${hasOrder ? "ring-2 ring-green-400" : "ring-0"}
         `}
       >
         <p className={"text-md"}>{label}</p>
