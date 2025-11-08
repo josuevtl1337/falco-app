@@ -29,7 +29,7 @@ export function PaymentSection({
   );
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<IPaymentMethod | null>(null);
-  const [cashPaid, setCashPaid] = useState<number>(0);
+  // const [cashPaid, setCashPa¡?¡___¡¿¿¿+´{+++**+d] = useState<number>(0);
   const [showDiscount, setshowDiscount] = useState<boolean>(false);
 
   const [discountValue, setDiscountValue] = useState<number>(0);
@@ -40,10 +40,10 @@ export function PaymentSection({
   }, [discountValue, subtotal]);
 
   const totalAfterDiscount = Math.max(0, subtotal - appliedDiscount);
-  const change =
-    selectedPaymentMethod?.name === "cash"
-      ? Math.max(0, Number(cashPaid || 0) - totalAfterDiscount)
-      : 0;
+  // const change =
+  //   selectedPaymentMethod?.name === "cash"
+  //     ? Math.max(0, Number(cashPaid || 0) - totalAfterDiscount)
+  //     : 0;
 
   const fetchPaymentMethods = async () => {
     try {
@@ -83,11 +83,10 @@ export function PaymentSection({
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-            selectedPaymentMethod?.code === "cash"
-              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-              : "border-[var(--card-border)] bg-transparent"
-          }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "cash"
+            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+            : "border-[var(--card-border)] bg-transparent"
+            }`}
         >
           <input
             type="radio"
@@ -101,11 +100,10 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-            selectedPaymentMethod?.code === "transfer"
-              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-              : "border-[var(--card-border)] bg-transparent"
-          }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "transfer"
+            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+            : "border-[var(--card-border)] bg-transparent"
+            }`}
         >
           <input
             type="radio"
@@ -119,11 +117,10 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-            selectedPaymentMethod?.code === "qr_code"
-              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-              : "border-[var(--card-border)] bg-transparent"
-          }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "qr_code"
+            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+            : "border-[var(--card-border)] bg-transparent"
+            }`}
         >
           <input
             type="radio"
@@ -137,11 +134,10 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-            selectedPaymentMethod?.code === "card"
-              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-              : "border-[var(--card-border)] bg-transparent"
-          }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "card"
+            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+            : "border-[var(--card-border)] bg-transparent"
+            }`}
         >
           <input
             type="radio"

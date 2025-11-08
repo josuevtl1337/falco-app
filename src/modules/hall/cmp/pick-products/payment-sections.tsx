@@ -1,27 +1,26 @@
 import { Button } from "@/components/ui/button";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-interface selectedProduct {
-  id: string;
-  name: string;
-  price: number;
-  qty: number;
-  // options?: string[];
-}
-interface Props {
-  selectedProducts: selectedProduct[];
-  onUpdateProductQty: (productId: string, qty: number) => void;
-  onPay: () => void;
-  onCommand: () => void;
-  isReadyToPay: boolean;
-  onRemoveProduct?: (productId: string) => void;
-  onClearProducts?: () => void;
-  onChangeSeat?: () => void;
-}
+// interface selectedProduct {
+//   id: string;
+//   name: string;
+//   price: number;
+//   qty: number;
+//   // options?: string[];
+// }
+// interface Props {
+//   selectedProducts: selectedProduct[];
+//   onUpdateProductQty: (productId: string, qty: number) => void;
+//   onPay: () => void;
+//   onCommand: () => void;
+//   isReadyToPay: boolean;
+//   onRemoveProduct?: (productId: string) => void;
+//   onClearProducts?: () => void;
+//   onChangeSeat?: () => void;
+// }
 
 export default function PaymentSection({
   subtotal,
-  isReadyToPay,
 }: {
   subtotal: number;
   isReadyToPay: boolean;
@@ -57,11 +56,10 @@ export default function PaymentSection({
         {/* Payment method */}
         <div className="grid grid-cols-2 gap-2 mb-3">
           <label
-            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-              paymentMethod === "cash"
-                ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
-                : "border-[var(--card-border)] bg-transparent"
-            }`}
+            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${paymentMethod === "cash"
+              ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+              }`}
           >
             <input
               type="radio"
@@ -75,11 +73,10 @@ export default function PaymentSection({
           </label>
 
           <label
-            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-              paymentMethod === "transfer"
-                ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
-                : "border-[var(--card-border)] bg-transparent"
-            }`}
+            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${paymentMethod === "transfer"
+              ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+              }`}
           >
             <input
               type="radio"
@@ -93,11 +90,10 @@ export default function PaymentSection({
           </label>
 
           <label
-            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-              paymentMethod === "qr"
-                ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
-                : "border-[var(--card-border)] bg-transparent"
-            }`}
+            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${paymentMethod === "qr"
+              ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+              }`}
           >
             <input
               type="radio"
@@ -111,11 +107,10 @@ export default function PaymentSection({
           </label>
 
           <label
-            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
-              paymentMethod === "card"
-                ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
-                : "border-[var(--card-border)] bg-transparent"
-            }`}
+            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${paymentMethod === "card"
+              ? "border-[hsl(var(--primary))] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+              }`}
           >
             <input
               type="radio"

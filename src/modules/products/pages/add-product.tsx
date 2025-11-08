@@ -14,10 +14,10 @@ import { IProductFormField } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Props {}
+interface Props { }
 
 function AddProduct(props: Props) {
-  const {} = props;
+  const { } = props;
 
   const FormSchema = z.object({
     name: z.string().min(2).max(50),
@@ -116,7 +116,7 @@ function AddProduct(props: Props) {
         }
         return response.json();
       })
-      .then((newProduct) => {
+      .then(() => {
         form.reset();
       })
       .catch((error) => {

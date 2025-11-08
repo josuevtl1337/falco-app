@@ -39,7 +39,7 @@ function MenuPage(props: Props) {
 
   const categories = useMemo(() => {
     const set = new Set<string>(["Todo"]);
-    data.forEach((p) => set.add(p.category_name));
+    data.forEach((p) => set.add(p.category_name ?? ""));
     return Array.from(set);
   }, [data]);
 
@@ -51,7 +51,7 @@ function MenuPage(props: Props) {
       )
       .filter((p) =>
         q
-          ? p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
+          ? p.name.toLowerCase().includes(q) || p.slug?.toLowerCase().includes(q)
           : true
       );
   }, [data, query, currentCat]);

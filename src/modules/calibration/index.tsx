@@ -1,18 +1,10 @@
-interface Props {}
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
 import CalibrationTab from "./cmp/calibration-tab";
 import AddCoffeeTab from "./cmp/add-coffee-tab";
 import CalibrationHistoryTab from "./cmp/history-tab";
 
-function CalibrationPage(props: Props) {
-  const {} = props;
+function CalibrationPage() {
 
   return (
     <main className="container">
