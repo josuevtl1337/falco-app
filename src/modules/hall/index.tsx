@@ -45,7 +45,7 @@ function OrdersPage() {
   const [orders, setOrders] = useState<OrderStateData[]>([]);
 
   const [currentOrder, setCurrentOrder] = useState<OrderStateData | null>(null);
-  console.log("currentOrder", currentOrder);
+
   const handleStateChange = (newState: OrderState) => {
     setState(newState);
   };
@@ -180,13 +180,15 @@ function OrdersPage() {
   const onPay = useCallback(
     async (paymentData: PaymentData) => {
       if (!currentOrder) return;
+
       const body = {
         ...currentOrder,
         status: "paid",
         payment_method_id: paymentData.paymentMethod.id,
-        discount_percentage: paymentData.discountValue,
+        discount_percentage: paymentData.discount_percentage,
         total_amount: paymentData.total_amount,
       };
+
       try {
         const res = await fetch(
           `http://localhost:3001/api/orders/${currentOrder.id}/status`,
@@ -241,32 +243,49 @@ function OrdersPage() {
     }
   }, [currentOrder]);
 
-  const onPrint = useCallback(async () => {
-    if (!currentOrder) return;
+  const onPrint = useCallback(
+    async (paymentData?: PaymentData) => {
+      var body = {};
 
-    const body = {
-      ...currentOrder,
-      items: currentOrder.items.map((p) => ({
-        menu_item_id: p.menu_item_id,
-        menu_item_name: p.menu_item_name,
-        quantity: p.quantity,
-        unit_price: p.unit_price,
-        subtotal: p.subtotal,
-      })),
-    };
-    try {
-      const response = await fetch("http://localhost:3001/api/print", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch FE");
+      if (!currentOrder) return;
+
+      body = {
+        ...currentOrder,
+        items: currentOrder.items.map((p) => ({
+          menu_item_id: p.menu_item_id,
+          menu_item_name: p.menu_item_name,
+          quantity: p.quantity,
+          unit_price: p.unit_price,
+          subtotal: p.subtotal,
+        })),
+      };
+
+      console.log("paymentData", paymentData);
+      if (paymentData) {
+        body = {
+          ...currentOrder,
+          status: "paid",
+          payment_method_id: paymentData.paymentMethod.id,
+          discount_percentage: paymentData.discount_percentage,
+          total_amount: paymentData.total_amount,
+        };
       }
-    } catch (error) {
-      console.error("Error printing order:", error);
-    }
-  }, [currentOrder]);
+
+      try {
+        const response = await fetch("http://localhost:3001/api/print", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch FE");
+        }
+      } catch (error) {
+        console.error("Error printing order:", error);
+      }
+    },
+    [currentOrder]
+  );
 
   const renderCurrentState = () => {
     switch (state) {
@@ -404,6 +423,7 @@ function OrdersPage() {
               onCommand={onCommand}
               onSave={onEditCommand}
               onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
+              activeSeat={seat}
             />
           </div>
         </>

@@ -17,6 +17,7 @@ interface Props {
   onClearProducts?: () => void;
   onChangeSeat?: () => void;
   onSave?: () => void;
+  activeSeat: string;
 }
 
 function SelectedProducts(props: Props) {
@@ -29,6 +30,7 @@ function SelectedProducts(props: Props) {
     isReadyToPay,
     onPay,
     onSave,
+    activeSeat,
   } = props;
 
   const subtotal = selectedProducts.reduce(
@@ -40,7 +42,7 @@ function SelectedProducts(props: Props) {
     <div className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <span className="font-semibold text-lg">
-          Orden para <span className="font-bold">Mesa 3</span>
+          Orden para {activeSeat} <span className="font-bold"></span>
         </span>
         <Button
           variant={"link"}

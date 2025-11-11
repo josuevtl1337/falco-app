@@ -72,10 +72,10 @@ function buildTicket(payload: Order): string {
 
   const discount = payload.discount_percentage ?? 0;
   const discountLabel = "Descuento:";
-  const discountAmount = `$${discount}`;
+  const discountAmount = `%${discount}`;
   out += discountLabel + discountAmount.padStart(lineWidth - discountLabel.length, " ") + "\n";
 
-  const total = subtotal - discount;
+  const total = payload.total_amount;
   const totalLabel = "TOTAL:";
   const totalAmount = `$${total}`;
   out += totalLabel + totalAmount.padStart(lineWidth - totalLabel.length, " ") + "\n";

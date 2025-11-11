@@ -13,7 +13,7 @@ export interface IPaymentMethod {
 
 export interface PaymentData {
   paymentMethod: IPaymentMethod;
-  discountValue: number;
+  discount_percentage: number;
   total_amount: number;
 }
 
@@ -29,7 +29,7 @@ export function PaymentSection({
   );
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<IPaymentMethod | null>(null);
-  // const [cashPaid, setCashPa¡?¡___¡¿¿¿+´{+++**+d] = useState<number>(0);
+  const [cashPaid, setCashPaid] = useState<number | null>(null);
   const [showDiscount, setshowDiscount] = useState<boolean>(false);
 
   const [discountValue, setDiscountValue] = useState<number>(0);
@@ -40,10 +40,12 @@ export function PaymentSection({
   }, [discountValue, subtotal]);
 
   const totalAfterDiscount = Math.max(0, subtotal - appliedDiscount);
-  // const change =
-  //   selectedPaymentMethod?.name === "cash"
-  //     ? Math.max(0, Number(cashPaid || 0) - totalAfterDiscount)
-  //     : 0;
+
+  // change now puede ser negativo (falta) o positivo (vuelto)
+  const change =
+    selectedPaymentMethod?.code === "cash"
+      ? Number(cashPaid || 0) - totalAfterDiscount
+      : 0;
 
   const fetchPaymentMethods = async () => {
     try {
@@ -68,13 +70,15 @@ export function PaymentSection({
       selectedPaymentMethod &&
       onChange({
         paymentMethod: selectedPaymentMethod,
+        discount_percentage: discountValue,
         total_amount: totalAfterDiscount,
-        discountValue,
       });
   }, [selectedPaymentMethod, discountValue, totalAfterDiscount]);
 
+  console.log(selectedPaymentMethod, totalAfterDiscount, discountValue);
   const onSelectPM = (name: string) => {
     setSelectedPaymentMethod(paymentMethods.find((pm) => pm.code === name)!);
+    if (name !== "cash") setCashPaid(0);
   };
 
   return (
@@ -83,10 +87,11 @@ export function PaymentSection({
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "cash"
-            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-            : "border-[var(--card-border)] bg-transparent"
-            }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
+            selectedPaymentMethod?.code === "cash"
+              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+          }`}
         >
           <input
             type="radio"
@@ -100,10 +105,11 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "transfer"
-            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-            : "border-[var(--card-border)] bg-transparent"
-            }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
+            selectedPaymentMethod?.code === "transfer"
+              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+          }`}
         >
           <input
             type="radio"
@@ -117,10 +123,11 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "qr_code"
-            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-            : "border-[var(--card-border)] bg-transparent"
-            }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
+            selectedPaymentMethod?.code === "qr_code"
+              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+          }`}
         >
           <input
             type="radio"
@@ -134,10 +141,11 @@ export function PaymentSection({
         </label>
 
         <label
-          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${selectedPaymentMethod?.code === "card"
-            ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
-            : "border-[var(--card-border)] bg-transparent"
-            }`}
+          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border ${
+            selectedPaymentMethod?.code === "card"
+              ? "border-[var(--primary)] bg-[rgba(116,189,94,0.06)]"
+              : "border-[var(--card-border)] bg-transparent"
+          }`}
         >
           <input
             type="radio"
@@ -150,6 +158,44 @@ export function PaymentSection({
           <span className="text-sm">Débito / Crédito</span>
         </label>
       </div>
+
+      {/* Sección de efectivo: monto entregado por el cliente y vuelto/falta */}
+      {selectedPaymentMethod?.code === "cash" && (
+        <div className="mb-3">
+          <div className="text-xs text-gray-400 mb-2">Calcular vuelto</div>
+
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={cashPaid ?? 0}
+              onChange={(e) => setCashPaid(Number(e.target.value || 0))}
+              className="flex-1 px-3 py-2 rounded-lg bg-[#18181b] border border-[var(--card-border)] text-white text-sm"
+              placeholder={"Monto entregado por el cliente"}
+            />
+
+            <div className="text-sm text-gray-300">
+              {change >= 0 ? (
+                <div className="text-right">
+                  <div className="text-xs text-slate-400">Vuelto</div>
+                  <div className="font-semibold text-white">
+                    ${Math.abs(change).toLocaleString()}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-right">
+                  <div className="text-xs text-amber-300">Faltan</div>
+                  <div className="font-semibold text-red-500">
+                    ${Math.abs(change).toLocaleString()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDiscount ? (
         <>
           <div className="flex gap-2">
@@ -166,19 +212,20 @@ export function PaymentSection({
             <Button
               type="button"
               onClick={() => setAppliedDiscount(computedDiscount)}
-              className="cursor-pointer px-3 py-2 rounded-lg border-1 text-[var(--primary)] font-semibold"
+              className="cursor-pointer px-3 py-2 rounded-lg border-1 font-semibold"
             >
               Aplicar
             </Button>
 
             <Button
               type="button"
+              variant={"outline"}
               onClick={() => {
                 setAppliedDiscount(0);
                 setDiscountValue(0);
                 setshowDiscount(false);
               }}
-              className="cursor-pointer px-3 py-2 rounded-lg border border-[var(--card-border)] text-sm text-gray-300"
+              className="cursor-pointer px-3 py-2"
             >
               Limpiar
             </Button>
@@ -233,7 +280,7 @@ export function PaymentSection({
           <div className="pt-3 border-t border-[var(--card-border)] flex justify-between items-baseline">
             <div className="text-lg font-medium text-gray-300">Total</div>
             <div className="text-2xl font-bold text-white">
-              ${Math.max(0, subtotal - computedDiscount).toLocaleString()}
+              ${totalAfterDiscount.toLocaleString()}
             </div>
           </div>
         </div>

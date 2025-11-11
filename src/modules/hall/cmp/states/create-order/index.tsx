@@ -60,7 +60,7 @@ function CreateOrderState(props: Props) {
           )}
 
           <div
-            onClick={onPrint}
+            onClick={() => onPrint()}
             className="border-2 radius-xl rounded-2xl border-gray-300 p-4 max-w-[250px] flex flex-row gap-2 justify-center items-center hover:border-gray-50 cursor-pointer"
           >
             <Printer />

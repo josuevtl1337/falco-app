@@ -5,6 +5,7 @@ import TableWithChairs from "./tables";
 import { Button } from "@/components/ui/button";
 import { Power, Sun, SunMoon } from "lucide-react";
 import { ShiftContext, ShiftType } from "@/App";
+import TakeAway from "./take-away";
 
 interface IHallPageProps {
   onChangeSeat: (id: string) => void;
@@ -130,8 +131,8 @@ const HallPage: React.FC<IHallPageProps> = ({
           )}
         </div>
       </div>
-      <div className="flex-1 flex flex-col justify-between">
-        <div className="flex flex-row gap-24">
+      <div className="flex-1 flex-col justify-between">
+        <div className="flex flex-row gap-4">
           {/* Banquetas */}
           <div className="flex flex-col items-start bg-[#043d4c] rounded-xl p-2 min-w-[80px]">
             <div className="text-sm font-semibold text-white">Banquetas</div>
@@ -148,7 +149,36 @@ const HallPage: React.FC<IHallPageProps> = ({
               ))}
             </div>
           </div>
-
+          {/* Take Away */}
+          <div>
+            <p className="text-sm font-semibold text-white my-4">Take Away</p>
+            <div className="flex flex-col gap-4">
+              <TakeAway
+                isClickable
+                label="Take Away"
+                id="TA1"
+                onClick={onChangeSeat}
+                activeSeat={activeSeat}
+                hasOrder={activeBanquetIds.has("TA1")}
+              />
+              <TakeAway
+                isClickable
+                label="Take Away"
+                id="TA2"
+                onClick={onChangeSeat}
+                activeSeat={activeSeat}
+                hasOrder={activeBanquetIds.has("TA2")}
+              />
+              <TakeAway
+                isClickable
+                label="Take Away"
+                id="TA3"
+                onClick={onChangeSeat}
+                activeSeat={activeSeat}
+                hasOrder={activeBanquetIds.has("TA3")}
+              />
+            </div>
+          </div>
           {/* Mesas */}
           <div className="flex flex-col flex-1 items-center justify-between pt-12">
             {mappedTables.map((table) => {
@@ -172,33 +202,7 @@ const HallPage: React.FC<IHallPageProps> = ({
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-4">
-        <div className="text-sm font-semibold text-white">Take Away</div>
-        <TableWithChairs
-          seats={0}
-          label="Take Away"
-          id="TA1"
-          onClick={onChangeSeat}
-          activeSeat={activeSeat}
-          hasOrder={activeBanquetIds.has("TA1")}
-        />
-        <TableWithChairs
-          seats={0}
-          label="Take Away"
-          id="TA2"
-          onClick={onChangeSeat}
-          activeSeat={activeSeat}
-          hasOrder={activeBanquetIds.has("TA2")}
-        />
-        <TableWithChairs
-          seats={0}
-          label="Take Away"
-          id="TA3"
-          onClick={onChangeSeat}
-          activeSeat={activeSeat}
-          hasOrder={activeBanquetIds.has("TA3")}
-        />
-      </div>
+
       <div className="flex justify-start ml-12 mt-12">
         <TableWithChairs
           seats={4}
