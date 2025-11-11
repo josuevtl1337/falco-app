@@ -6,6 +6,7 @@ import CalibrationRouter from "./routers/CalibrationRouter.ts";
 import MenuRouter from "./routers/MenuRouter.ts";
 import OrderRouter from "./routers/OrderRouter.ts";
 import PrintRouter from "./routers/PrintRouter.ts";
+import ShiftRouter from "./routers/ShiftRouter.ts";
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ app.use("/api", CalibrationRouter);
 app.use("/api", MenuRouter );
 app.use("/api", OrderRouter);
 app.use("/api", PrintRouter);
+app.use("/api", ShiftRouter);
 
 const PORT = 3001;
 app.listen(PORT, () => {

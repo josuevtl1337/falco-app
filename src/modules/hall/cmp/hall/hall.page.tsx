@@ -1,15 +1,17 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo } from "react";
 import { OrderStateData } from "../..";
 import Banquets from "./banquets";
 import TableWithChairs from "./tables";
 import { Button } from "@/components/ui/button";
-import { Sun, SunMoon } from "lucide-react";
+import { Power, Sun, SunMoon } from "lucide-react";
+import { ShiftContext, ShiftType } from "@/App";
 
 interface IHallPageProps {
   onChangeSeat: (id: string) => void;
-  onChangeShift: (shift: string) => void;
+  onChangeShift: (shift: ShiftType) => void;
   orders: OrderStateData[];
   activeSeat: string;
+  handleCloseShift: () => void;
 }
 
 // Hall disposal
@@ -34,10 +36,14 @@ const HallPage: React.FC<IHallPageProps> = ({
   onChangeShift,
   orders,
   activeSeat,
+  handleCloseShift,
 }) => {
-  const [shiftLocal, setShiftLocal] = useState<"morning" | "afternoon">(
-    "morning"
-  );
+  // const [shiftLocal, setShiftLocal] = useState<"morning" | "afternoon">(
+  //   "morning"
+  // );
+
+  const { shift } = useContext(ShiftContext);
+  console.log(shift);
 
   const activeBanquetIds = useMemo(
     () => new Set(orders.map((o) => o.table_number)),
@@ -62,14 +68,16 @@ const HallPage: React.FC<IHallPageProps> = ({
     [tables, activeBanquetIds]
   );
 
+  const isAnyOrderOpen = useMemo(() => orders.length > 0, [orders]);
+
   return (
     <div className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
       <div className="flex flex-row justify-between">
         <div className="flex items-center gap-4 justify-between w-full">
-          <div className="text-lg text-white font-light">
+          <div className="text-sm text-white font-light">
             {`Turno: `}{" "}
-            <span className="text-sm font-medium text-[var(--info)]">
-              {shiftLocal === "morning" ? "Mañana" : "Tarde"}
+            <span className="text-lg font-medium text-[var(--info)]">
+              {shift === "morning" ? "Mañana" : "Tarde"}
             </span>
           </div>
 
@@ -78,16 +86,15 @@ const HallPage: React.FC<IHallPageProps> = ({
               type="button"
               variant={"secondary"}
               onClick={() => {
-                setShiftLocal("morning");
                 onChangeShift("morning");
               }}
               className={
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition " +
-                (shiftLocal === "morning"
+                (shift === "morning"
                   ? "bg-[var(--foreground)] text-black"
                   : "text-gray-300 hover:bg-[rgba(255,255,255,0.02)]")
               }
-              aria-pressed={shiftLocal === "morning"}
+              aria-pressed={shift === "morning"}
               title="Mañana"
             >
               <Sun />
@@ -96,25 +103,33 @@ const HallPage: React.FC<IHallPageProps> = ({
             <Button
               type="button"
               onClick={() => {
-                setShiftLocal("afternoon");
                 onChangeShift("afternoon");
               }}
               variant={"secondary"}
               className={
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition " +
-                (shiftLocal === "afternoon"
+                (shift === "afternoon"
                   ? "bg-[var(--foreground)] text-black"
                   : "text-gray-300 hover:bg-[rgba(255,255,255,0.02)]")
               }
-              aria-pressed={shiftLocal === "afternoon"}
+              aria-pressed={shift === "afternoon"}
               title="Tarde"
             >
               <SunMoon />
             </Button>
           </div>
+          {!isAnyOrderOpen && (
+            <Button
+              variant={"outline"}
+              type="button"
+              onClick={handleCloseShift}
+              className="px-3 py-1 rounded-lg text-sm font-semibold"
+            >
+              <Power />
+            </Button>
+          )}
         </div>
       </div>
-
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex flex-row gap-24">
           {/* Banquetas */}
@@ -157,8 +172,34 @@ const HallPage: React.FC<IHallPageProps> = ({
           </div>
         </div>
       </div>
-
-      <div className="flex justify-start ml-12 mt-24">
+      <div className="flex flex-col gap-4">
+        <div className="text-sm font-semibold text-white">Take Away</div>
+        <TableWithChairs
+          seats={0}
+          label="Take Away"
+          id="TA1"
+          onClick={onChangeSeat}
+          activeSeat={activeSeat}
+          hasOrder={activeBanquetIds.has("TA1")}
+        />
+        <TableWithChairs
+          seats={0}
+          label="Take Away"
+          id="TA2"
+          onClick={onChangeSeat}
+          activeSeat={activeSeat}
+          hasOrder={activeBanquetIds.has("TA2")}
+        />
+        <TableWithChairs
+          seats={0}
+          label="Take Away"
+          id="TA3"
+          onClick={onChangeSeat}
+          activeSeat={activeSeat}
+          hasOrder={activeBanquetIds.has("TA3")}
+        />
+      </div>
+      <div className="flex justify-start ml-12 mt-12">
         <TableWithChairs
           seats={4}
           label="Mesa 4"

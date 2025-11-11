@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import MenuPage from "../menu";
 import HallPage from "./cmp/hall/hall.page";
 import CreateOrderState from "./cmp/states/create-order";
@@ -7,6 +7,7 @@ import SelectedProducts from "./cmp/pick-products/index";
 import { toast } from "sonner";
 import CheckoutView from "./cmp/checkout/checkout-view";
 import { PaymentData } from "./cmp/checkout/payment-section";
+import { ShiftContext } from "@/App";
 
 export enum OrderState {
   CREATE_ORDER = "CREATE_ORDER",
@@ -38,7 +39,8 @@ function OrdersPage() {
   const [state, setState] = useState<OrderState>(OrderState.CREATE_ORDER);
 
   const [seat, setSeat] = useState<string>("");
-  const [shift, setShift] = useState<string>("morning");
+
+  const { shift, setShift } = useContext(ShiftContext);
 
   const [orders, setOrders] = useState<OrderStateData[]>([]);
 
@@ -347,6 +349,24 @@ function OrdersPage() {
     setState(OrderState.PICK_MENU);
   };
 
+  const handleCloseShift = useCallback(async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/close-shift", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shift: shift }),
+      });
+      if (!res.ok) throw new Error("Network response was not ok");
+      toast.success("Backup creado / turno cerrado");
+      setOrders([]);
+      setSeat("");
+      setCurrentOrder(null);
+    } catch (err) {
+      console.error("Error closing shift:", err);
+      toast.error("Error closing shift");
+    }
+  }, [shift]);
+
   return (
     <div
       className="h-[95vh] grid gap-4"
@@ -357,7 +377,9 @@ function OrdersPage() {
         onChangeShift={setShift}
         orders={orders}
         activeSeat={seat}
+        handleCloseShift={handleCloseShift}
       />
+
       {seat && (
         <>
           <div className="h-full overflow-auto">{renderCurrentState()}</div>

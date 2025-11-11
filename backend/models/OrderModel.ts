@@ -2,7 +2,7 @@ import db from "../db.ts";
 
 export interface Order {
   id?: number;
-  table_number: number;
+  table_number: string;
   shift: "morning" | "afternoon";
   status?: "pending" | "completed" | "cancelled";
   discount_percentage?: number;

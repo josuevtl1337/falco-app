@@ -1,3 +1,4 @@
+import { CupSoda } from "lucide-react";
 import Banquets from "./banquets";
 
 export default function TableWithChairs({
@@ -35,7 +36,7 @@ export default function TableWithChairs({
         ${activeSeat === id ? "border-2 border-white" : ""}
          flex items-center justify-center mx-auto my-auto text-xs font-bold text-black hover:brightness-150 rounded-lg shadow-lg`}
       >
-        {label}
+        {label !== "Take Away" ? <>{label}</> : <CupSoda size={32} />}
       </div>
 
       {/* Sillas */}
