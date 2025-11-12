@@ -9,8 +9,7 @@ class ShiftModel {
   static async closeShift(shift: string): Promise<void> {
     const dbPath = path.resolve(__dirname, "../app.db");
 
-    const backUpPath =
-      "C:\Users\Prii-\Documents\repos\falco-backups";
+    const backUpPath = path.resolve(__dirname, "../../../falco-backups");
 
     if (!fs.existsSync(backUpPath)) {
       fs.mkdirSync(backUpPath, { recursive: true });
