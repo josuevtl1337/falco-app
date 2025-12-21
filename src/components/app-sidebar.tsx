@@ -80,7 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       },
       {
         name: "Reportes",
-        url: RoutePaths.orders,
+        url: RoutePaths.reports,
         icon: IconReport,
       },
     ],

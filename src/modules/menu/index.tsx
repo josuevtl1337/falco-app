@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import ProductCard from "./cmp/product-card";
 import { IMenuItem as Product } from "../../../backend/models/MenuModel.ts";
 import { OrderProduct } from "../hall/index.tsx";
+import { Button } from "@/components/ui/button.tsx";
 
 export type MenuViewProps = {
   products?: Product[];
@@ -51,7 +52,8 @@ function MenuPage(props: Props) {
       )
       .filter((p) =>
         q
-          ? p.name.toLowerCase().includes(q) || p.slug?.toLowerCase().includes(q)
+          ? p.name.toLowerCase().includes(q) ||
+            p.slug?.toLowerCase().includes(q)
           : true
       );
   }, [data, query, currentCat]);
@@ -59,13 +61,13 @@ function MenuPage(props: Props) {
   return (
     <main className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
       <div>
-        <button
+        <Button
           onClick={onBack}
           className="text-white bg-gray-700 rounded-lg px-3 py-1 mb-6 flex items-center gap-2 hover:bg-gray-600 transition"
         >
           <ArrowLeft size={18} />
           <span className="text-base font-medium">Volver</span>
-        </button>
+        </Button>
       </div>
       <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -79,6 +81,17 @@ function MenuPage(props: Props) {
               className="pl-11 py-3 rounded-xl bg-[#181c1f] border border-[var(--card-border)] text-white placeholder:text-gray-400"
             />
           </div>
+
+          <Button
+            variant="default"
+            className="hidden sm:inline-flex"
+            onClick={() => {
+              setQuery("");
+              setCurrentCat("Todo");
+            }}
+          >
+            Agregar Producto
+          </Button>
         </div>
 
         <Tabs value={currentCat} onValueChange={setCurrentCat} className="">

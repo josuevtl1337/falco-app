@@ -1,3 +1,5 @@
+import ReportsTab from "./reports-tab";
+
 interface Props {}
 
 function ReportsPage(props: Props) {
@@ -5,7 +7,7 @@ function ReportsPage(props: Props) {
 
   return (
     <main>
-      <p>Reports Page</p>
+      <ReportsTab />
     </main>
   );
 }

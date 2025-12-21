@@ -387,47 +387,49 @@ function OrdersPage() {
   }, [shift]);
 
   return (
-    <div
-      className="h-[95vh] grid gap-4"
-      style={{ gridTemplateColumns: "320px 1fr 360px" }}
-    >
-      <HallPage
-        onChangeSeat={onChangeSteat}
-        onChangeShift={setShift}
-        orders={orders}
-        activeSeat={seat}
-        handleCloseShift={handleCloseShift}
-      />
+    <div>
+      <div
+        className="h-[95vh] grid gap-4"
+        style={{ gridTemplateColumns: "320px 1fr 360px" }}
+      >
+        <HallPage
+          onChangeSeat={onChangeSteat}
+          onChangeShift={setShift}
+          orders={orders}
+          activeSeat={seat}
+          handleCloseShift={handleCloseShift}
+        />
 
-      {seat && (
-        <>
-          <div className="h-full overflow-auto">{renderCurrentState()}</div>
+        {seat && (
+          <>
+            <div className="h-full overflow-auto">{renderCurrentState()}</div>
 
-          <div className="h-full overflow-auto">
-            <SelectedProducts
-              selectedProducts={
-                currentOrder
-                  ? currentOrder.items.map((item) => ({
-                      id: item.menu_item_id,
-                      qty: item.quantity,
-                      name: item.menu_item_name,
-                      price: item.unit_price,
-                      subtotal: item.subtotal,
-                    })) || []
-                  : []
-              }
-              onUpdateProductQty={updateProductQty}
-              onRemoveProduct={removeProduct}
-              onClearProducts={clearProducts}
-              isReadyToPay={currentOrder?.status === "open" || false}
-              onCommand={onCommand}
-              onSave={onEditCommand}
-              onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
-              activeSeat={seat}
-            />
-          </div>
-        </>
-      )}
+            <div className="h-full overflow-auto">
+              <SelectedProducts
+                selectedProducts={
+                  currentOrder
+                    ? currentOrder.items.map((item) => ({
+                        id: item.menu_item_id,
+                        qty: item.quantity,
+                        name: item.menu_item_name,
+                        price: item.unit_price,
+                        subtotal: item.subtotal,
+                      })) || []
+                    : []
+                }
+                onUpdateProductQty={updateProductQty}
+                onRemoveProduct={removeProduct}
+                onClearProducts={clearProducts}
+                isReadyToPay={currentOrder?.status === "open" || false}
+                onCommand={onCommand}
+                onSave={onEditCommand}
+                onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
+                activeSeat={seat}
+              />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
