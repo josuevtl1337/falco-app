@@ -1,8 +1,7 @@
 import useReports from "../hooks/use-reports";
-import { Button } from "@/components/ui/button";
 
 export default function DailyMetrics() {
-  const [data, loading, error] = useReports();
+  const [data] = useReports();
   // const { from, to, quick } = filters;
   // const { setQuick } = setFilters;
 
