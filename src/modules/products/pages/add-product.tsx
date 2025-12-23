@@ -14,11 +14,7 @@ import { IProductFormField } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Props { }
-
-function AddProduct(props: Props) {
-  const { } = props;
-
+function AddProduct() {
   const FormSchema = z.object({
     name: z.string().min(2).max(50),
     category_id: z.string().min(2).max(50),

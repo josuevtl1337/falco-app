@@ -73,7 +73,7 @@ export function PaymentSection({
         discount_percentage: discountValue,
         total_amount: totalAfterDiscount,
       });
-  }, [selectedPaymentMethod, discountValue, totalAfterDiscount]);
+  }, [selectedPaymentMethod, discountValue, totalAfterDiscount, onChange]);
 
   console.log(selectedPaymentMethod, totalAfterDiscount, discountValue);
   const onSelectPM = (name: string) => {

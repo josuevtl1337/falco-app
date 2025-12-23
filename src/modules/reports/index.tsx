@@ -1,10 +1,6 @@
 import ReportsTab from "./reports-tab";
 
-interface Props {}
-
-function ReportsPage(props: Props) {
-  const {} = props;
-
+function ReportsPage() {
   return (
     <main>
       <ReportsTab />

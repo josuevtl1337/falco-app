@@ -4,10 +4,7 @@ import NavButton from "@/components/ui/navButton";
 import { Coffee } from "lucide-react";
 import { IProduct } from "./types";
 
-interface Props {}
-
-function ProductsPage(props: Props) {
-  const {} = props;
+function ProductsPage() {
   const [products, setProducts] = useState<IProduct[]>([]);
 
   useEffect(() => {

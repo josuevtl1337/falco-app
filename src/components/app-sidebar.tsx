@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     navMain: [
       {
         title: "Resumen",
-        url: "#",
+        url: RoutePaths.resume,
         icon: IconDashboard,
       },
       {
@@ -95,12 +95,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5 text-[var(--primary)]"
             >
-              <a href="#">
-                {/* <Coffee className="!size-5" /> */}
-                <span className="text-base font-semibold logo-font text-[var(--primary)]">
-                  Falco
-                </span>
-              </a>
+              {/* <Coffee className="!size-5" /> */}
+              <span className="text-base font-semibold logo-font text-[var(--primary)]">
+                Falco
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

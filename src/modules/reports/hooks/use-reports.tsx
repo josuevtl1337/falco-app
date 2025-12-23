@@ -8,12 +8,34 @@ interface ReportsData {
   topProduct?: { name: string; qty: number } | null;
 }
 
-const useReports = (): [ReportsData | null, boolean, string | null] => {
+// interface IFilterProps {
+//   timeFilter: string;
+//   shift?: "morning" | "afternoon" | "both";
+//   dateFrom?: string;
+//   dateTo?: string;
+// }
+
+const useReports = (
+  timeFilter: string,
+  shift?: "morning" | "afternoon" | "both"
+): [ReportsData | null, boolean, string | null] => {
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const dateParams = new Date();
+  switch (timeFilter) {
+    case "today":
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      dateParams.toISOString().split("T")[0];
+      break;
+    case "yesterday":
+      dateParams.setDate(dateParams.getDate() - 1);
+      // No additional params needed
+      break;
+  }
+  // const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 
   useEffect(() => {
     const fetchDaily = async () => {
@@ -21,7 +43,9 @@ const useReports = (): [ReportsData | null, boolean, string | null] => {
       setError(null);
       try {
         const res = await fetch(
-          `http://localhost:3001/api/report/report-daily?date=${date}`
+          `http://localhost:3001/api/report/report-daily?date=${
+            dateParams.toISOString().split("T")[0]
+          }&shift=${shift || "both"}`
         );
         const contentType = res.headers.get("content-type") || "";
         if (!res.ok) {
@@ -36,9 +60,8 @@ const useReports = (): [ReportsData | null, boolean, string | null] => {
         }
 
         const json = await res.json();
-        // Expected shape: { date, count, total, avg }
         const parsed: ReportsData = {
-          date: json.date || date,
+          date: json.date,
           count: Number(json.count || 0),
           total: Number(json.total || 0),
           avg: Number(json.avg || 0),
@@ -54,7 +77,7 @@ const useReports = (): [ReportsData | null, boolean, string | null] => {
     };
 
     fetchDaily();
-  }, [date]);
+  }, [timeFilter, shift, dateParams]);
 
   return [data, loading, error];
 };

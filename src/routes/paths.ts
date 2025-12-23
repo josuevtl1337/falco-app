@@ -8,6 +8,7 @@ export enum RoutePaths {
   menu = "/menu",
   calibration = "/calibration",
   createOrder = "/create-order",
+  resume = "/resume",
 }
 
 export type RouteKey =

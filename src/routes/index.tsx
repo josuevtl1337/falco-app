@@ -2,6 +2,7 @@ import { lazy } from "react";
 import type { RouteObject } from "react-router-dom";
 import { Suspense } from "react";
 import { useRoutes } from "react-router-dom";
+import ResumePage from "@/modules/resume";
 
 const MainLayout = lazy(() => import("@/layouts/main-layout"));
 const HomePage = lazy(() => import("@/modules/home/index"));
@@ -21,7 +22,7 @@ export const routes: RouteObject[] = [
     element: <MainLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      // { path: "orders", element: <OrdersPage /> },
+      { path: "resume", element: <ResumePage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "products/add", element: <AddProduct /> },
       { path: "reports", element: <ReportsPage /> },

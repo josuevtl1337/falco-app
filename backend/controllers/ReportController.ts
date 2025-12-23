@@ -5,9 +5,9 @@ class ReportController {
   public async getDailyReport(req: Request, res: Response): Promise<void> {
    
     try {
-      const dateParam = (req.query?.date as string) || new Date().toISOString().slice(0, 10);
-      const report = await ReportModel.getDailyReport(dateParam);
-      res.status(200).json({ date: dateParam, ...report });
+      // const dateParam = (req.query?.date as string) || new Date().toISOString().slice(0, 10);
+      const report = await ReportModel.getDailyReport(req.query.date as string, req.query.shift as string);
+      res.status(200).json({ ...report });
 
     } catch (error:any) {
       console.error("ReportController.getDailyReport error:", error);

@@ -14,11 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IExpenseFormField } from "../types/types";
 
-interface Props {}
-
-function AddExpense(props: Props) {
-  const {} = props;
-
+function AddExpense() {
   const FormSchema = z.object({
     name: z.string().min(2).max(50),
     description: z.string().optional(),

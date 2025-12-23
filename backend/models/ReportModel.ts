@@ -5,8 +5,26 @@ class ReportModel {
    * Devuelve conteo, suma y promedio de orders para una fecha (YYYY-MM-DD)
    */
   public static async getDailyReport(
-    date: string
+    date: string,
+    shift?: string
   ): Promise<{ count: number; total: number; avg: number }> {
+    if (shift && shift !== "both") {
+      const stmt = db.prepare(
+        `SELECT 
+            COUNT(*) as count,
+            COALESCE(SUM(total_amount), 0) as total,
+            COALESCE(AVG(total_amount), 0) as avg
+        FROM orders
+        WHERE DATE(created_at) = ? AND shift = ? AND status = 'paid'`
+      );
+      const data = stmt.get(date, shift);
+      return {
+        count: data.count || 0,
+        total: data.total || 0,
+        avg: data.avg || 0,
+      };
+    }
+
     const data = db
       .prepare(
         `SELECT 
@@ -14,7 +32,7 @@ class ReportModel {
             COALESCE(SUM(total_amount), 0) as total,
             COALESCE(AVG(total_amount), 0) as avg
         FROM orders
-        WHERE DATE(created_at) = ?`
+        WHERE DATE(created_at) = ? AND status = 'paid'`
       )
       .get(date);
     return {

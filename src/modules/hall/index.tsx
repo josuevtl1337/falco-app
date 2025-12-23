@@ -61,6 +61,7 @@ function OrdersPage() {
     subtotal: product.price,
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const addOrIncrementItem = (
     items: OrderStateData["items"],
     product: OrderProduct
@@ -99,7 +100,7 @@ function OrdersPage() {
         };
       });
     },
-    [seat, shift]
+    [addOrIncrementItem, seat, shift]
   );
 
   const updateProductQty = useCallback((productId: string, qty: number) => {

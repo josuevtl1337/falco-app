@@ -7,7 +7,7 @@ export default function ReportsTab() {
       <header className="flex items-center justify-between">
         <div>
           <p className="text-2xl font-semibold text-slate-100">
-            Reportes de ventas
+            Resumen de ventas
           </p>
         </div>
 
@@ -16,10 +16,8 @@ export default function ReportsTab() {
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-4">
-        <aside className="col-span-12 lg:col-span-4">
-          <DailyMetrics />
-        </aside>
+      <div className="gap-4">
+        <DailyMetrics />
       </div>
     </div>
   );

@@ -57,7 +57,7 @@ const HallPage: React.FC<IHallPageProps> = ({
         ...b,
         hasOrder: activeBanquetIds.has(b.id),
       })),
-    [banquets, activeBanquetIds]
+    [activeBanquetIds]
   );
 
   const mappedTables = useMemo(
@@ -66,7 +66,7 @@ const HallPage: React.FC<IHallPageProps> = ({
         ...b,
         hasOrder: activeBanquetIds.has(b.id),
       })),
-    [tables, activeBanquetIds]
+    [activeBanquetIds]
   );
 
   const isAnyOrderOpen = useMemo(() => orders.length > 0, [orders]);
