@@ -23,29 +23,27 @@ const useReports = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const dateParams = new Date();
-  switch (timeFilter) {
-    case "today":
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      dateParams.toISOString().split("T")[0];
-      break;
-    case "yesterday":
-      dateParams.setDate(dateParams.getDate() - 1);
-      // No additional params needed
-      break;
-  }
+  // Compute date inside effect to avoid recreating objects each render
   // const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 
   useEffect(() => {
     const fetchDaily = async () => {
+      const dateObj = new Date();
+      switch (timeFilter) {
+        case "yesterday":
+          dateObj.setDate(dateObj.getDate() - 1);
+          break;
+        case "today":
+        default:
+          break;
+      }
+      const dateStr = dateObj.toISOString().split("T")[0];
       setLoading(true);
       setError(null);
       try {
         const res = await fetch(
-          `http://localhost:3001/api/report/report-daily?date=${
-            dateParams.toISOString().split("T")[0]
-          }&shift=${shift || "both"}`
+          `http://localhost:3001/api/report/report-daily?date=${dateStr}&shift=${shift || "both"
+          }`
         );
         const contentType = res.headers.get("content-type") || "";
         if (!res.ok) {
@@ -77,7 +75,7 @@ const useReports = (
     };
 
     fetchDaily();
-  }, [timeFilter, shift, dateParams]);
+  }, [timeFilter, shift]);
 
   return [data, loading, error];
 };

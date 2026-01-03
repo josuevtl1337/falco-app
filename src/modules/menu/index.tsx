@@ -40,22 +40,26 @@ function MenuPage(props: Props) {
 
   const categories = useMemo(() => {
     const set = new Set<string>(["Todo"]);
-    data.forEach((p) => set.add(p.category_name ?? ""));
-    return Array.from(set);
+    if (data && data.length > 0) {
+      data.forEach((p) => set.add(p.category_name ?? ""));
+      return Array.from(set);
+    }
   }, [data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return data
-      .filter((p) =>
-        currentCat === "Todo" ? true : p.category_name === currentCat
-      )
-      .filter((p) =>
-        q
-          ? p.name.toLowerCase().includes(q) ||
+    if (data && data.length > 0) {
+      return data
+        .filter((p) =>
+          currentCat === "Todo" ? true : p.category_name === currentCat
+        )
+        .filter((p) =>
+          q
+            ? p.name.toLowerCase().includes(q) ||
             p.slug?.toLowerCase().includes(q)
-          : true
-      );
+            : true
+        );
+    }
   }, [data, query, currentCat]);
 
   return (
@@ -97,7 +101,7 @@ function MenuPage(props: Props) {
         <Tabs value={currentCat} onValueChange={setCurrentCat} className="">
           <ScrollArea className="mb-4 w-full whitespace-nowrap">
             <TabsList className="inline-flex w-max gap-2 rounded-2xl bg-[#181c1f] p-1 shadow border border-[var(--card-border)]">
-              {categories.map((c) => (
+              {categories && categories.length > 0 && categories.map((c) => (
                 <TabsTrigger
                   key={c}
                   value={c}
@@ -112,7 +116,7 @@ function MenuPage(props: Props) {
           </ScrollArea>
           <TabsContent value={currentCat} className="mt-2 flex-1">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
+              {filtered && filtered.length > 0 && filtered.map((p) => (
                 <ProductCard
                   key={p.id}
                   product={p}
@@ -120,7 +124,7 @@ function MenuPage(props: Props) {
                   onUpdateQty={updateProductQty}
                 />
               ))}
-              {filtered.length === 0 && (
+              {filtered && filtered.length > 0 && filtered.length === 0 && (
                 <div className="col-span-full text-center text-gray-400 dark:text-gray-500 py-12">
                   No hay productos para mostrar.
                 </div>
