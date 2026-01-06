@@ -120,5 +120,150 @@ db.prepare(`
     ('QR')
 `).run();
 
+// ============================================
+// MÓDULO COST-ENGINE - Esquema de Base de Datos
+// ============================================
+
+// Tabla de Proveedores
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    contact_info TEXT,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Migración: Agregar columnas faltantes si la tabla ya existe
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(suppliers)").all() as Array<{ name: string; dflt_value: string | null }>;
+  const hasActive = tableInfo.some(col => col.name === 'active');
+  const hasContactInfo = tableInfo.some(col => col.name === 'contact_info');
+  const hasCreatedAt = tableInfo.some(col => col.name === 'created_at');
+
+  if (!hasActive) {
+    db.prepare("ALTER TABLE suppliers ADD COLUMN active INTEGER DEFAULT 1").run();
+    console.log("✓ Added 'active' column to suppliers table");
+  }
+  if (!hasContactInfo) {
+    db.prepare("ALTER TABLE suppliers ADD COLUMN contact_info TEXT").run();
+    // Si existe 'phone', migrar datos
+    if (tableInfo.some(col => col.name === 'phone')) {
+      db.prepare("UPDATE suppliers SET contact_info = phone WHERE contact_info IS NULL").run();
+      console.log("✓ Migrated 'phone' to 'contact_info' in suppliers table");
+    }
+    console.log("✓ Added 'contact_info' column to suppliers table");
+  }
+  if (!hasCreatedAt) {
+    // SQLite no permite DEFAULT CURRENT_TIMESTAMP directamente en ALTER TABLE
+    // Necesitamos agregar la columna y luego actualizar los valores existentes
+    db.prepare("ALTER TABLE suppliers ADD COLUMN created_at TEXT").run();
+    db.prepare("UPDATE suppliers SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL").run();
+    console.log("✓ Added 'created_at' column to suppliers table");
+  }
+} catch (error) {
+  // Ignorar errores de migración si la tabla no existe aún
+  console.log("Migration note:", error);
+}
+
+// Tabla de Materias Primas
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS raw_materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    supplier_id INTEGER REFERENCES suppliers(id),
+    purchase_price REAL NOT NULL,
+    purchase_quantity REAL NOT NULL,
+    purchase_unit TEXT NOT NULL CHECK (purchase_unit IN ('kg', 'gr', 'l', 'ml', 'unidad')),
+    unit_cost REAL NOT NULL, -- Calculado automáticamente
+    active INTEGER DEFAULT 1,
+    last_price_update TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla de Recetas
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    recipe_cost REAL DEFAULT 0, -- Calculado automáticamente
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla de Ingredientes de Recetas (relación many-to-many)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS recipe_ingredients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    raw_material_id INTEGER NOT NULL REFERENCES raw_materials(id),
+    quantity REAL NOT NULL CHECK (quantity > 0),
+    unit TEXT NOT NULL CHECK (unit IN ('kg', 'gr', 'l', 'ml', 'unidad')),
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(recipe_id, raw_material_id)
+  )
+`).run();
+
+// Tabla de Productos Finales (productos de carta)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS cost_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    recipe_id INTEGER REFERENCES recipes(id),
+    fixed_cost REAL DEFAULT 0,
+    fixed_cost_type TEXT CHECK (fixed_cost_type IN ('per_item', 'per_minute', 'global')) DEFAULT 'per_item',
+    preparation_time_minutes REAL DEFAULT 0,
+    margin_percentage REAL NOT NULL DEFAULT 50, -- Margen de ganancia en %
+    calculated_cost REAL DEFAULT 0, -- Costo calculado (receta + gastos fijos)
+    suggested_price REAL DEFAULT 0, -- Precio sugerido con margen
+    rounded_price REAL DEFAULT 0, -- Precio redondeado para carta
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla de Gastos Fijos Globales
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS fixed_costs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    cost_per_item REAL DEFAULT 0,
+    cost_per_minute REAL DEFAULT 0,
+    is_global INTEGER DEFAULT 0, -- 1 = global, 0 = por producto
+    product_id INTEGER REFERENCES cost_products(id) ON DELETE CASCADE,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Tabla de Historial de Precios (para tracking de cambios)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS price_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER REFERENCES cost_products(id) ON DELETE CASCADE,
+    raw_material_id INTEGER REFERENCES raw_materials(id) ON DELETE SET NULL,
+    old_value REAL,
+    new_value REAL,
+    change_type TEXT CHECK (change_type IN ('raw_material_price', 'recipe_change', 'fixed_cost', 'margin', 'manual_update')),
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Índices para mejorar performance
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_raw_materials_supplier ON raw_materials(supplier_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_material ON recipe_ingredients(raw_material_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_cost_products_recipe ON cost_products(recipe_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_price_history_material ON price_history(raw_material_id)`).run();
+
 
 export default db;

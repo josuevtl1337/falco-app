@@ -1,5 +1,6 @@
 import * as React from "react";
 import {
+  IconCalculatorFilled,
   IconChartBar,
   IconDashboard,
   IconDatabase,
@@ -82,6 +83,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         name: "Reportes",
         url: RoutePaths.reports,
         icon: IconReport,
+      },
+      {
+        name: "Motor de Costos",
+        url: RoutePaths.costEngine,
+        icon: IconCalculatorFilled,
       },
     ],
   };

@@ -9,6 +9,7 @@ export enum RoutePaths {
   calibration = "/calibration",
   createOrder = "/create-order",
   resume = "/resume",
+  costEngine = "/cost-engine",
 }
 
 export type RouteKey =
@@ -18,6 +19,7 @@ export type RouteKey =
   | "productsAdd"
   | "reports"
   | "budget"
-  | "menu"
+  | "menu"  
   | "hall"
-  | "calibration";
+  | "calibration"
+  | "costEngine";
