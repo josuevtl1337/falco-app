@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RawMaterialsTab from "./components/raw-materials-tab";
 import SuppliersTab from "./components/suppliers-tab";

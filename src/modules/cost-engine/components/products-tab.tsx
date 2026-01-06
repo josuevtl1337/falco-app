@@ -129,7 +129,7 @@ function ProductsTab() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return;
+    if (!window.confirm("¿Estás seguro de eliminar este producto?")) return;
 
     try {
       const response = await fetch(`${API_BASE}/products/${id}`, {
