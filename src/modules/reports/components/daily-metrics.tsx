@@ -20,7 +20,6 @@ export default function DailyMetrics() {
 
   const [data] = useReports(timeFilter, shift);
 
-  console.log(shift);
   // const [dateRange, setDateRange] = useState<DateRange | undefined>({
   //   from: new Date(2025, 5, 12),
   //   to: new Date(2025, 6, 15),
@@ -95,11 +94,10 @@ export default function DailyMetrics() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               <Button
                 variant={timeFilter === "today" ? "default" : "outline"}
-                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${
-                  timeFilter === "today"
+                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${timeFilter === "today"
                     ? "bg-blue-600 hover:bg-blue-700 border-blue-500"
                     : "border-slate-700 hover:bg-slate-800 text-slate-300"
-                }`}
+                  }`}
                 onClick={() => setTimeFilter("today")}
               >
                 Hoy
@@ -107,11 +105,10 @@ export default function DailyMetrics() {
 
               <Button
                 variant={timeFilter === "yesterday" ? "default" : "outline"}
-                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${
-                  timeFilter === "yesterday"
+                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${timeFilter === "yesterday"
                     ? "bg-blue-600 hover:bg-blue-700 border-blue-500"
                     : "border-slate-700 hover:bg-slate-800 text-slate-300"
-                }`}
+                  }`}
                 onClick={() => setTimeFilter("yesterday")}
               >
                 Ayer
@@ -119,11 +116,10 @@ export default function DailyMetrics() {
 
               <Button
                 variant={timeFilter === "week" ? "default" : "outline"}
-                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${
-                  timeFilter === "week"
+                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${timeFilter === "week"
                     ? "bg-blue-600 hover:bg-blue-700 border-blue-500"
                     : "border-slate-700 hover:bg-slate-800 text-slate-300"
-                }`}
+                  }`}
                 onClick={() => setTimeFilter("week")}
                 disabled
               >
@@ -132,11 +128,10 @@ export default function DailyMetrics() {
 
               <Button
                 variant={timeFilter === "month" ? "default" : "outline"}
-                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${
-                  timeFilter === "month"
+                className={`rounded-lg text-xs md:text-sm font-medium transition-all ${timeFilter === "month"
                     ? "bg-blue-600 hover:bg-blue-700 border-blue-500"
                     : "border-slate-700 hover:bg-slate-800 text-slate-300"
-                }`}
+                  }`}
                 onClick={() => setTimeFilter("month")}
                 disabled
               >
