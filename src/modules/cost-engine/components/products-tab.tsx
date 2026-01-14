@@ -25,17 +25,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Calculator } from "lucide-react";
-import { ICostProduct, IRecipe, FixedCostType } from "../types";
+import { Plus, Pencil, Trash2, Calculator, Search } from "lucide-react";
+import { ICostProduct, IRecipe, ISupplier, IRawMaterial, FixedCostType } from "../types";
 import { toast } from "sonner";
+import { SearchAndFilter } from "./search-and-filter";
 
 const API_BASE = "http://localhost:3001/api/cost-engine";
 
 function ProductsTab() {
   const [products, setProducts] = useState<ICostProduct[]>([]);
   const [recipes, setRecipes] = useState<IRecipe[]>([]);
+  const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<IRawMaterial[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterSupplier, setFilterSupplier] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ICostProduct | null>(null);
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     recipe_id: "",
@@ -48,7 +54,29 @@ function ProductsTab() {
   useEffect(() => {
     fetchProducts();
     fetchRecipes();
+    fetchSuppliers();
+    fetchRawMaterials();
   }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/suppliers`);
+      const data = await response.json();
+      setSuppliers(data);
+    } catch (error) {
+      toast.error("Error al cargar proveedores");
+    }
+  };
+
+  const fetchRawMaterials = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/raw-materials`);
+      const data = await response.json();
+      setRawMaterials(data);
+    } catch (error) {
+      toast.error("Error al cargar materias primas");
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -106,6 +134,7 @@ function ProductsTab() {
           preparation_time_minutes: "",
           margin_percentage: "50",
         });
+        setRecipeSearchTerm("");
         fetchProducts();
       } else {
         toast.error("Error al guardar producto");
@@ -125,6 +154,7 @@ function ProductsTab() {
       preparation_time_minutes: product.preparation_time_minutes.toString(),
       margin_percentage: product.margin_percentage.toString(),
     });
+    setRecipeSearchTerm("");
     setIsDialogOpen(true);
   };
 
@@ -164,11 +194,18 @@ function ProductsTab() {
     }
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setRecipeSearchTerm("");
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Productos de Carta</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button
               onClick={() => {
@@ -181,6 +218,7 @@ function ProductsTab() {
                   preparation_time_minutes: "",
                   margin_percentage: "50",
                 });
+                setRecipeSearchTerm("");
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -214,20 +252,49 @@ function ProductsTab() {
                 <Label htmlFor="recipe_id">Receta</Label>
                 <Select
                   value={formData.recipe_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, recipe_id: value })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, recipe_id: value });
+                    setRecipeSearchTerm("");
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona una receta" />
                   </SelectTrigger>
                   <SelectContent>
+                    <div className="px-2 py-1.5 border-b">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar receta..."
+                          value={recipeSearchTerm}
+                          onChange={(e) => setRecipeSearchTerm(e.target.value)}
+                          className="pl-8 h-8"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
                     <SelectItem value="none">Sin receta</SelectItem>
-                    {recipes.map((recipe) => (
-                      <SelectItem key={recipe.id} value={recipe.id.toString()}>
-                        {recipe.name}
-                      </SelectItem>
-                    ))}
+                    {recipes
+                      .filter((recipe) =>
+                        recipe.name
+                          .toLowerCase()
+                          .includes(recipeSearchTerm.toLowerCase())
+                      )
+                      .map((recipe) => (
+                        <SelectItem key={recipe.id} value={recipe.id.toString()}>
+                          {recipe.name}
+                        </SelectItem>
+                      ))}
+                    {recipes.filter((recipe) =>
+                      recipe.name
+                        .toLowerCase()
+                        .includes(recipeSearchTerm.toLowerCase())
+                    ).length === 0 && recipeSearchTerm && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                        No se encontraron recetas
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -327,7 +394,49 @@ function ProductsTab() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.map((product) => (
+          {(() => {
+            const filtered = products.filter((product) => {
+              const matchesSearch = product.name
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+              
+              if (filterSupplier === "all") {
+                return matchesSearch;
+              }
+
+              // Filtrar por proveedor: verificar si la receta del producto usa materias primas del proveedor
+              if (!product.recipe_id) {
+                return matchesSearch;
+              }
+
+              const recipe = recipes.find((r) => r.id === product.recipe_id);
+              if (!recipe || !recipe.ingredients) {
+                return matchesSearch;
+              }
+
+              const hasSupplierMaterial = recipe.ingredients.some((ingredient) => {
+                const material = rawMaterials.find(
+                  (m) => m.id === ingredient.raw_material_id
+                );
+                return material?.supplier_id !== null && 
+                       material?.supplier_id !== undefined &&
+                       material.supplier_id.toString() === filterSupplier;
+              });
+
+              return matchesSearch && hasSupplierMaterial;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    No se encontraron productos
+                  </TableCell>
+                </TableRow>
+              );
+            }
+
+            return filtered.map((product) => (
             <TableRow key={product.id}>
               <TableCell>{product.id}</TableCell>
               <TableCell>{product.name}</TableCell>
@@ -364,7 +473,8 @@ function ProductsTab() {
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            ));
+          })()}
         </TableBody>
       </Table>
     </div>

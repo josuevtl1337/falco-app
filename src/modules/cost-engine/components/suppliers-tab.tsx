@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { ISupplier } from "../types";
 import { toast } from "sonner";
+import { SearchAndFilter } from "./search-and-filter";
 
 const API_BASE = "http://localhost:3001/api/cost-engine";
 
@@ -31,6 +32,7 @@ function SuppliersTab() {
   const [editingSupplier, setEditingSupplier] = useState<ISupplier | null>(
     null
   );
+  const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState({ name: "", contact_info: "" });
 
   useEffect(() => {
@@ -169,6 +171,13 @@ function SuppliersTab() {
         </Dialog>
       </div>
 
+      <SearchAndFilter
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        showFilter={false}
+        searchPlaceholder="Buscar proveedor..."
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -179,9 +188,25 @@ function SuppliersTab() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {suppliers &&
-            suppliers.length > 0 &&
-            suppliers.map((supplier: ISupplier) => (
+          {(() => {
+            const filtered = suppliers.filter((supplier) =>
+              supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+              return (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center text-muted-foreground py-8"
+                  >
+                    No se encontraron proveedores
+                  </TableCell>
+                </TableRow>
+              );
+            }
+
+            return filtered.map((supplier: ISupplier) => (
               <TableRow key={supplier.id}>
                 <TableCell>{supplier.id}</TableCell>
                 <TableCell>{supplier.name}</TableCell>
@@ -205,7 +230,8 @@ function SuppliersTab() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            ));
+          })()}
         </TableBody>
       </Table>
     </div>

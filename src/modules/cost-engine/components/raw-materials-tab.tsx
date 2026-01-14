@@ -28,6 +28,7 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { IRawMaterial, ISupplier, UnitType } from "../types";
 import { toast } from "sonner";
+import { SearchAndFilter } from "./search-and-filter";
 
 const API_BASE = "http://localhost:3001/api/cost-engine";
 
@@ -38,6 +39,8 @@ function RawMaterialsTab() {
   const [editingMaterial, setEditingMaterial] = useState<IRawMaterial | null>(
     null
   );
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterSupplier, setFilterSupplier] = useState<string>("all");
   const [formData, setFormData] = useState({
     name: "",
     supplier_id: "",
@@ -116,7 +119,7 @@ function RawMaterialsTab() {
     setEditingMaterial(material);
     setFormData({
       name: material.name,
-      supplier_id: material.supplier_id.toString(),
+      supplier_id: material.supplier_id?.toString() || "",
       purchase_price: material.purchase_price.toString(),
       purchase_quantity: material.purchase_quantity.toString(),
       purchase_unit: material.purchase_unit,
@@ -143,6 +146,24 @@ function RawMaterialsTab() {
       toast.error("Error al eliminar materia prima");
     }
   };
+
+  // Filtrar materiales
+  const filteredMaterials = materials.filter((material) => {
+    const matchesSearch = material.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterSupplier === "all" || 
+      (material.supplier_id !== null && material.supplier_id !== undefined && 
+       material.supplier_id.toString() === filterSupplier);
+    return matchesSearch && matchesFilter;
+  });
+
+  // Preparar opciones de filtro
+  const supplierFilterOptions = suppliers.map((supplier) => ({
+    value: supplier.id.toString(),
+    label: supplier.name,
+  }));
 
   return (
     <div>
@@ -288,6 +309,19 @@ function RawMaterialsTab() {
         </Dialog>
       </div>
 
+      <SearchAndFilter
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterValue={filterSupplier}
+        onFilterChange={setFilterSupplier}
+        filterOptions={suppliers.map((s) => ({
+          value: s.id.toString(),
+          label: s.name,
+        }))}
+        filterPlaceholder="Filtrar por proveedor"
+        searchPlaceholder="Buscar materia prima..."
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -302,9 +336,29 @@ function RawMaterialsTab() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {materials &&
-            materials.length > 0 &&
-            materials.map((material) => (
+          {(() => {
+            const filtered = materials.filter((material) => {
+              const matchesSearch = material.name
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+              const matchesFilter =
+                filterSupplier === "all" || 
+                (material.supplier_id !== null && material.supplier_id !== undefined && 
+                 material.supplier_id.toString() === filterSupplier);
+              return matchesSearch && matchesFilter;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    No se encontraron materias primas
+                  </TableCell>
+                </TableRow>
+              );
+            }
+
+            return filtered.map((material) => (
               <TableRow key={material.id}>
                 <TableCell>{material.id}</TableCell>
                 <TableCell>{material.name}</TableCell>
@@ -334,9 +388,10 @@ function RawMaterialsTab() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
+              </TableCell>
+            </TableRow>
+            ));
+          })()}
         </TableBody>
       </Table>
     </div>
