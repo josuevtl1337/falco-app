@@ -134,7 +134,7 @@ function FixedCostsTab() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este gasto fijo?")) return;
+    if (!window.confirm("¿Estás seguro de eliminar este gasto fijo?")) return;
 
     try {
       const response = await fetch(`${API_BASE}/fixed-costs/${id}`, {
