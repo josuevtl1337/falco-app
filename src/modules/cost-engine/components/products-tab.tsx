@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Calculator, Search } from "lucide-react";
-import { ICostProduct, IRecipe, ISupplier, IRawMaterial, FixedCostType } from "../types";
+import { ICostProduct, IRecipe, IRawMaterial, FixedCostType } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
 
@@ -35,12 +35,12 @@ const API_BASE = "http://localhost:3001/api/cost-engine";
 function ProductsTab() {
   const [products, setProducts] = useState<ICostProduct[]>([]);
   const [recipes, setRecipes] = useState<IRecipe[]>([]);
-  const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
   const [rawMaterials, setRawMaterials] = useState<IRawMaterial[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterSupplier, setFilterSupplier] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ICostProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ICostProduct | null>(
+    null
+  );
   const [recipeSearchTerm, setRecipeSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     name: "",
@@ -54,19 +54,8 @@ function ProductsTab() {
   useEffect(() => {
     fetchProducts();
     fetchRecipes();
-    fetchSuppliers();
     fetchRawMaterials();
   }, []);
-
-  const fetchSuppliers = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/suppliers`);
-      const data = await response.json();
-      setSuppliers(data);
-    } catch (error) {
-      toast.error("Error al cargar proveedores");
-    }
-  };
 
   const fetchRawMaterials = async () => {
     try {
@@ -111,7 +100,10 @@ function ProductsTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
-          recipe_id: formData.recipe_id && formData.recipe_id !== "none" ? parseInt(formData.recipe_id) : null,
+          recipe_id:
+            formData.recipe_id && formData.recipe_id !== "none"
+              ? parseInt(formData.recipe_id)
+              : null,
           fixed_cost: parseFloat(formData.fixed_cost) || 0,
           fixed_cost_type: formData.fixed_cost_type,
           preparation_time_minutes:
@@ -282,7 +274,10 @@ function ProductsTab() {
                           .includes(recipeSearchTerm.toLowerCase())
                       )
                       .map((recipe) => (
-                        <SelectItem key={recipe.id} value={recipe.id.toString()}>
+                        <SelectItem
+                          key={recipe.id}
+                          value={recipe.id.toString()}
+                        >
                           {recipe.name}
                         </SelectItem>
                       ))}
@@ -290,11 +285,12 @@ function ProductsTab() {
                       recipe.name
                         .toLowerCase()
                         .includes(recipeSearchTerm.toLowerCase())
-                    ).length === 0 && recipeSearchTerm && (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
-                        No se encontraron recetas
-                      </div>
-                    )}
+                    ).length === 0 &&
+                      recipeSearchTerm && (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                          No se encontraron recetas
+                        </div>
+                      )}
                   </SelectContent>
                 </Select>
               </div>
@@ -381,6 +377,13 @@ function ProductsTab() {
         </Dialog>
       </div>
 
+      <SearchAndFilter
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        showFilter={false}
+        searchPlaceholder="Buscar Producto..."
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -399,10 +402,6 @@ function ProductsTab() {
               const matchesSearch = product.name
                 .toLowerCase()
                 .includes(searchTerm.toLowerCase());
-              
-              if (filterSupplier === "all") {
-                return matchesSearch;
-              }
 
               // Filtrar por proveedor: verificar si la receta del producto usa materias primas del proveedor
               if (!product.recipe_id) {
@@ -414,14 +413,17 @@ function ProductsTab() {
                 return matchesSearch;
               }
 
-              const hasSupplierMaterial = recipe.ingredients.some((ingredient) => {
-                const material = rawMaterials.find(
-                  (m) => m.id === ingredient.raw_material_id
-                );
-                return material?.supplier_id !== null && 
-                       material?.supplier_id !== undefined &&
-                       material.supplier_id.toString() === filterSupplier;
-              });
+              const hasSupplierMaterial = recipe.ingredients.some(
+                (ingredient) => {
+                  const material = rawMaterials.find(
+                    (m) => m.id === ingredient.raw_material_id
+                  );
+                  return (
+                    material?.supplier_id !== null &&
+                    material?.supplier_id !== undefined
+                  );
+                }
+              );
 
               return matchesSearch && hasSupplierMaterial;
             });
@@ -429,7 +431,10 @@ function ProductsTab() {
             if (filtered.length === 0) {
               return (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     No se encontraron productos
                   </TableCell>
                 </TableRow>
@@ -437,42 +442,42 @@ function ProductsTab() {
             }
 
             return filtered.map((product) => (
-            <TableRow key={product.id}>
-              <TableCell>{product.id}</TableCell>
-              <TableCell>{product.name}</TableCell>
-              <TableCell>{product.recipe_name || "-"}</TableCell>
-              <TableCell>${product.calculated_cost.toFixed(2)}</TableCell>
-              <TableCell>${product.suggested_price.toFixed(2)}</TableCell>
-              <TableCell className="font-semibold">
-                ${product.rounded_price.toFixed(2)}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRecalculate(product.id)}
-                    title="Recalcular precio"
-                  >
-                    <Calculator className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(product)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
+              <TableRow key={product.id}>
+                <TableCell>{product.id}</TableCell>
+                <TableCell>{product.name}</TableCell>
+                <TableCell>{product.recipe_name || "-"}</TableCell>
+                <TableCell>${product.calculated_cost.toFixed(2)}</TableCell>
+                <TableCell>${product.suggested_price.toFixed(2)}</TableCell>
+                <TableCell className="font-semibold">
+                  ${product.rounded_price.toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRecalculate(product.id)}
+                      title="Recalcular precio"
+                    >
+                      <Calculator className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(product)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ));
           })()}
         </TableBody>

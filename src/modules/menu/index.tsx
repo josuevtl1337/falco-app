@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ProductCard from "./cmp/product-card";
+import MenuItemForm from "./cmp/menu-item-form";
 import { IMenuItem as Product } from "../../../backend/models/MenuModel.ts";
 import { OrderProduct } from "../hall/index.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { toast } from "sonner";
 
 export type MenuViewProps = {
   products?: Product[];
@@ -21,20 +23,35 @@ interface Props {
   displayType?: "default" | "pick_items";
 }
 
+interface Category {
+  category_id: string;
+  name: string;
+}
+
 function MenuPage(props: Props) {
   const { onBack, pickProduct, updateProductQty } = props;
   const [query, setQuery] = useState<string>("");
   const [currentCat, setCurrentCat] = useState<string>("Todo");
   const [data, setData] = useState<OrderProduct[]>([]);
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Product | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/get-menu-items")
-      .then((res) => res.json())
-      .then((data) => {
-        setData(data);
+    // Cargar productos y categorías
+    Promise.all([
+      fetch("http://localhost:3001/api/get-menu-items"),
+      fetch("http://localhost:3001/api/categories"),
+    ])
+      .then(([productsRes, categoriesRes]) =>
+        Promise.all([productsRes.json(), categoriesRes.json()]),
+      )
+      .then(([productsData, categoriesData]) => {
+        setData(productsData);
+        setCategoriesList(categoriesData);
       })
       .catch((err) => {
-        console.error("Error fetching products:", err);
+        console.error("Error fetching data:", err);
       });
   }, []);
 
@@ -51,16 +68,78 @@ function MenuPage(props: Props) {
     if (data && data.length > 0) {
       return data
         .filter((p) =>
-          currentCat === "Todo" ? true : p.category_name === currentCat
+          currentCat === "Todo" ? true : p.category_name === currentCat,
         )
         .filter((p) =>
           q
             ? p.name.toLowerCase().includes(q) ||
-            p.slug?.toLowerCase().includes(q)
-            : true
+              p.slug?.toLowerCase().includes(q)
+            : true,
         );
     }
   }, [data, query, currentCat]);
+
+  const handleAddProduct = () => {
+    setEditingItem(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingItem(product);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteProduct = async (product: Product) => {
+    if (
+      !window.confirm(
+        `¿Estás seguro de que quieres eliminar "${product.name}"?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/menu-items/${product.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al eliminar el producto");
+      }
+
+      toast.success("Producto eliminado correctamente");
+      // Recargar la lista
+      fetch("http://localhost:3001/api/get-menu-items")
+        .then((res) => res.json())
+        .then((data) => {
+          setData(data);
+        });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar el producto",
+      );
+    }
+  };
+
+  const handleFormSuccess = () => {
+    // Recargar la lista de productos
+    fetch("http://localhost:3001/api/get-menu-items")
+      .then((res) => res.json())
+      .then((data) => {
+        setData(data);
+      })
+      .catch((err) => {
+        console.error("Error reloading products:", err);
+        toast.error("Error al recargar la lista de productos");
+      });
+  };
 
   return (
     <main className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
@@ -89,10 +168,7 @@ function MenuPage(props: Props) {
           <Button
             variant="default"
             className="hidden sm:inline-flex"
-            onClick={() => {
-              setQuery("");
-              setCurrentCat("Todo");
-            }}
+            onClick={handleAddProduct}
           >
             Agregar Producto
           </Button>
@@ -101,29 +177,35 @@ function MenuPage(props: Props) {
         <Tabs value={currentCat} onValueChange={setCurrentCat} className="">
           <ScrollArea className="mb-4 w-full whitespace-nowrap">
             <TabsList className="inline-flex w-max gap-2 rounded-2xl bg-[#181c1f] p-1 shadow border border-[var(--card-border)]">
-              {categories && categories.length > 0 && categories.map((c) => (
-                <TabsTrigger
-                  key={c}
-                  value={c}
-                  className={cn(
-                    "rounded-xl px-4 py-2 text-base font-semibold transition text-white data-[state=active]:bg-[var(--primary)] data-[state=active]:text-white"
-                  )}
-                >
-                  {c}
-                </TabsTrigger>
-              ))}
+              {categories &&
+                categories.length > 0 &&
+                categories.map((c) => (
+                  <TabsTrigger
+                    key={c}
+                    value={c}
+                    className={cn(
+                      "rounded-xl px-4 py-2 text-base font-semibold transition text-white data-[state=active]:bg-[var(--primary)] data-[state=active]:text-white",
+                    )}
+                  >
+                    {c}
+                  </TabsTrigger>
+                ))}
             </TabsList>
           </ScrollArea>
           <TabsContent value={currentCat} className="mt-2 flex-1">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered && filtered.length > 0 && filtered.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onSelect={pickProduct}
-                  onUpdateQty={updateProductQty}
-                />
-              ))}
+              {filtered &&
+                filtered.length > 0 &&
+                filtered.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    onSelect={pickProduct}
+                    onUpdateQty={updateProductQty}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                  />
+                ))}
               {filtered && filtered.length > 0 && filtered.length === 0 && (
                 <div className="col-span-full text-center text-gray-400 dark:text-gray-500 py-12">
                   No hay productos para mostrar.
@@ -133,6 +215,14 @@ function MenuPage(props: Props) {
           </TabsContent>
         </Tabs>
       </div>
+
+      <MenuItemForm
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        item={editingItem}
+        categories={categoriesList}
+        onSuccess={handleFormSuccess}
+      />
     </main>
   );
 }

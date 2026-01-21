@@ -147,24 +147,6 @@ function RawMaterialsTab() {
     }
   };
 
-  // Filtrar materiales
-  const filteredMaterials = materials.filter((material) => {
-    const matchesSearch = material.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      filterSupplier === "all" || 
-      (material.supplier_id !== null && material.supplier_id !== undefined && 
-       material.supplier_id.toString() === filterSupplier);
-    return matchesSearch && matchesFilter;
-  });
-
-  // Preparar opciones de filtro
-  const supplierFilterOptions = suppliers.map((supplier) => ({
-    value: supplier.id.toString(),
-    label: supplier.name,
-  }));
-
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -342,16 +324,20 @@ function RawMaterialsTab() {
                 .toLowerCase()
                 .includes(searchTerm.toLowerCase());
               const matchesFilter =
-                filterSupplier === "all" || 
-                (material.supplier_id !== null && material.supplier_id !== undefined && 
-                 material.supplier_id.toString() === filterSupplier);
+                filterSupplier === "all" ||
+                (material.supplier_id !== null &&
+                  material.supplier_id !== undefined &&
+                  material.supplier_id.toString() === filterSupplier);
               return matchesSearch && matchesFilter;
             });
 
             if (filtered.length === 0) {
               return (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={8}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     No se encontraron materias primas
                   </TableCell>
                 </TableRow>
@@ -388,8 +374,8 @@ function RawMaterialsTab() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-              </TableCell>
-            </TableRow>
+                </TableCell>
+              </TableRow>
             ));
           })()}
         </TableBody>

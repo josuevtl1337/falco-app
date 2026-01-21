@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Calculator } from "lucide-react";
-import { IRecipe, IRawMaterial, ISupplier, UnitType } from "../types";
+import { IRecipe, IRawMaterial, UnitType } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
 
@@ -36,9 +36,8 @@ const API_BASE = "http://localhost:3001/api/cost-engine";
 function RecipesTab() {
   const [recipes, setRecipes] = useState<IRecipe[]>([]);
   const [rawMaterials, setRawMaterials] = useState<IRawMaterial[]>([]);
-  const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
+  // const [_suppliers, setSuppliers] = useState<ISupplier[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterSupplier, setFilterSupplier] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<IRecipe | null>(null);
   const [formData, setFormData] = useState({
@@ -59,18 +58,18 @@ function RecipesTab() {
   useEffect(() => {
     fetchRecipes();
     fetchRawMaterials();
-    fetchSuppliers();
+    // fetchSuppliers();
   }, []);
 
-  const fetchSuppliers = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/suppliers`);
-      const data = await response.json();
-      setSuppliers(data);
-    } catch (error) {
-      toast.error("Error al cargar proveedores");
-    }
-  };
+  // const fetchSuppliers = async () => {
+  //   try {
+  //     const response = await fetch(`${API_BASE}/suppliers`);
+  //     const data = await response.json();
+  //     setSuppliers(data);
+  //   } catch (error) {
+  //     toast.error("Error al cargar proveedores");
+  //   }
+  // };
 
   const fetchRecipes = async () => {
     try {
@@ -381,6 +380,13 @@ function RecipesTab() {
         </Dialog>
       </div>
 
+      <SearchAndFilter
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        showFilter={false}
+        searchPlaceholder="Buscar receta..."
+      />
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -397,20 +403,19 @@ function RecipesTab() {
               const matchesSearch = recipe.name
                 .toLowerCase()
                 .includes(searchTerm.toLowerCase());
-              
-              if (filterSupplier === "all") {
-                return matchesSearch;
-              }
 
               // Filtrar por proveedor: verificar si alguna materia prima de la receta pertenece al proveedor
-              const hasSupplierMaterial = recipe.ingredients?.some((ingredient) => {
-                const material = rawMaterials.find(
-                  (m) => m.id === ingredient.raw_material_id
-                );
-                return material?.supplier_id !== null && 
-                       material?.supplier_id !== undefined &&
-                       material.supplier_id.toString() === filterSupplier;
-              });
+              const hasSupplierMaterial = recipe.ingredients?.some(
+                (ingredient) => {
+                  const material = rawMaterials.find(
+                    (m) => m.id === ingredient.raw_material_id
+                  );
+                  return (
+                    material?.supplier_id !== null &&
+                    material?.supplier_id !== undefined
+                  );
+                }
+              );
 
               return matchesSearch && hasSupplierMaterial;
             });
@@ -418,7 +423,10 @@ function RecipesTab() {
             if (filtered.length === 0) {
               return (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     No se encontraron recetas
                   </TableCell>
                 </TableRow>
