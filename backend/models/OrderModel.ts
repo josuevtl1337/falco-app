@@ -1,10 +1,11 @@
 import db from "../db.ts";
+import StockModel from "./StockModel.ts";
 
 export interface Order {
   id?: number;
   table_number: string;
   shift: "morning" | "afternoon";
-  status?: "pending" | "completed" | "cancelled";
+  status?: "open" | "paid" | "cancelled";
   discount_percentage?: number;
   total_amount: number;
   payment_method_id?: number;
@@ -166,6 +167,55 @@ export const OrderModel = {
   },
 
   updateStatus: (order: Order) => {
+    // Si se está marcando como pagado, validar y descontar stock
+    if (order.status === "paid" && order.id) {
+      // Obtener items de la orden para validar stock
+      const orderItems = db
+        .prepare(
+          `SELECT menu_item_id, quantity FROM order_items WHERE order_id = ?`
+        )
+        .all(order.id) as Array<{ menu_item_id: number; quantity: number }>;
+
+      // Validar stock
+      const validation = StockModel.validateStockForOrder(orderItems);
+      if (!validation.valid) {
+        const insufficientList = validation.insufficientItems
+          .map(
+            (item) =>
+              `${item.name}: necesario ${item.required}${item.unit}, disponible ${item.available}${item.unit}`
+          )
+          .join(", ");
+        throw new Error(`Stock insuficiente: ${insufficientList}`);
+      }
+
+      // Descontar stock en transacción
+      return db.transaction(() => {
+        // Actualizar estado de la orden
+        db.prepare(
+          `
+          UPDATE orders SET
+            status = ?,
+            payment_method_id = ?,
+            discount_percentage = ?,
+            total_amount = ?
+          WHERE id = ?
+        `
+        ).run(
+          order.status,
+          order.payment_method_id,
+          order.discount_percentage,
+          order.total_amount,
+          order.id
+        );
+
+        // Descontar stock
+        StockModel.deductStockForOrder(order.id!, orderItems);
+
+        return { changes: 1 };
+      })();
+    }
+
+    // Si no es pago, solo actualizar estado
     return db
       .prepare(
         `

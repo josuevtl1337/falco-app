@@ -201,13 +201,28 @@ function OrdersPage() {
             body: JSON.stringify(body),
           }
         );
-        if (!res.ok) throw new Error("Network response was not ok");
+        
+        if (!res.ok) {
+          // Intentar parsear el error del backend
+          const errorData = await res.json().catch(() => ({}));
+          const errorMessage = errorData?.message || "Error al procesar el pago";
+          
+          // Verificar si es error de stock
+          if (errorMessage.includes("Stock insuficiente")) {
+            toast.error(errorMessage, { duration: 6000 });
+          } else {
+            toast.error(errorMessage);
+          }
+          return;
+        }
+        
         toast.success("¡Cachiiinnn! ☕💰 ");
         setSeat("");
         setCurrentOrder(null);
         await getAllOrders();
       } catch (err) {
         console.error("Error fetching orders:", err);
+        toast.error("Error de conexión al procesar el pago");
       }
     },
     [currentOrder]

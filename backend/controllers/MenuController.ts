@@ -110,6 +110,46 @@ class MenuController {
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   }
+
+  public async bulkUpdatePrices(req: Request, res: Response): Promise<void> {
+    try {
+      const { categoryIds, operation, value } = req.body;
+
+      if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+        res.status(400).json({ error: "categoryIds array is required" });
+        return;
+      }
+
+      if (!operation || !value === undefined) {
+        res.status(400).json({ error: "operation and value are required" });
+        return;
+      }
+
+      const validOperations = [
+        "pct_increase",
+        "pct_decrease",
+        "fixed_amount_increase",
+        "fixed_amount_decrease",
+        "fixed_price",
+      ];
+
+      if (!validOperations.includes(operation)) {
+        res.status(400).json({ error: "Invalid operation" });
+        return;
+      }
+
+      const changes = await MenuModel.bulkUpdatePrices(
+        categoryIds,
+        operation as any,
+        Number(value),
+      );
+
+      res.status(200).json({ message: "Prices updated successfully", changes });
+    } catch (error) {
+      console.error("Error bulk updating prices:", error);
+      res.status(500).json({ error: "Failed to update prices" });
+    }
+  }
 }
 
 export default new MenuController();

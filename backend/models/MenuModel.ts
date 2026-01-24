@@ -136,6 +136,55 @@ class MenuModel {
       .all();
     return data;
   }
+
+  public async bulkUpdatePrices(
+    categoryIds: (string | number)[],
+    operation:
+      | "pct_increase"
+      | "pct_decrease"
+      | "fixed_amount_increase"
+      | "fixed_amount_decrease"
+      | "fixed_price",
+    value: number,
+  ) {
+    if (categoryIds.length === 0) return 0;
+
+    const placeholders = categoryIds.map(() => "?").join(",");
+    let sql = "";
+
+    // Ensure value is handled safely
+    const val = Number(value);
+
+    switch (operation) {
+      case "pct_increase":
+        // price = price * (1 + val/100)
+        sql = `UPDATE menu_items SET price = CAST(price * (1 + ? / 100.0) AS INTEGER) WHERE category_id IN (${placeholders})`;
+        break;
+      case "pct_decrease":
+        // price = price * (1 - val/100)
+        sql = `UPDATE menu_items SET price = CAST(price * (1 - ? / 100.0) AS INTEGER) WHERE category_id IN (${placeholders})`;
+        break;
+      case "fixed_amount_increase":
+        // price = price + val
+        sql = `UPDATE menu_items SET price = price + ? WHERE category_id IN (${placeholders})`;
+        break;
+      case "fixed_amount_decrease":
+        // price = price - val
+        sql = `UPDATE menu_items SET price = MAX(0, price - ?) WHERE category_id IN (${placeholders})`;
+        break;
+      case "fixed_price":
+        // price = val
+        sql = `UPDATE menu_items SET price = ? WHERE category_id IN (${placeholders})`;
+        break;
+      default:
+        throw new Error("Invalid operation");
+    }
+
+    const stmt = db.prepare(sql);
+    // The first parameter is 'value', followed by all categoryIds
+    const result = stmt.run(val, ...categoryIds);
+    return result.changes;
+  }
 }
 
 export default new MenuModel();

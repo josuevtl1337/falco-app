@@ -265,5 +265,61 @@ db.prepare(`CREATE INDEX IF NOT EXISTS idx_cost_products_recipe ON cost_products
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id)`).run();
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_price_history_material ON price_history(raw_material_id)`).run();
 
+// ============================================
+// MÓDULO STOCK - Migraciones y Tablas
+// ============================================
+
+// Migración: Agregar columnas de stock a raw_materials si no existen
+try {
+  const rawMaterialsInfo = db.prepare("PRAGMA table_info(raw_materials)").all() as Array<{ name: string }>;
+  const hasStockQuantity = rawMaterialsInfo.some(col => col.name === 'stock_quantity');
+  const hasMinStock = rawMaterialsInfo.some(col => col.name === 'min_stock');
+
+  if (!hasStockQuantity) {
+    db.prepare("ALTER TABLE raw_materials ADD COLUMN stock_quantity REAL DEFAULT 0").run();
+    console.log("✓ Added 'stock_quantity' column to raw_materials table");
+  }
+  if (!hasMinStock) {
+    db.prepare("ALTER TABLE raw_materials ADD COLUMN min_stock REAL DEFAULT 0").run();
+    console.log("✓ Added 'min_stock' column to raw_materials table");
+  }
+} catch (error) {
+  console.log("Stock migration note:", error);
+}
+
+// Tabla de Recetas por Item del Menú (qué insumos usa cada item del menú)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS menu_item_recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    menu_item_id INTEGER NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    raw_material_id INTEGER NOT NULL REFERENCES raw_materials(id),
+    quantity REAL NOT NULL CHECK (quantity > 0),
+    unit TEXT NOT NULL CHECK (unit IN ('kg', 'gr', 'l', 'ml', 'unidad')),
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(menu_item_id, raw_material_id)
+  )
+`).run();
+
+// Índices para menu_item_recipes
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_menu_item_recipes_menu ON menu_item_recipes(menu_item_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_menu_item_recipes_material ON menu_item_recipes(raw_material_id)`).run();
+
+// Tabla de historial de movimientos de stock
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS stock_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_material_id INTEGER NOT NULL REFERENCES raw_materials(id),
+    quantity REAL NOT NULL,
+    movement_type TEXT NOT NULL CHECK (movement_type IN ('add', 'deduct', 'adjustment')),
+    reference_type TEXT, -- 'order', 'manual', etc.
+    reference_id INTEGER, -- order_id si aplica
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_material ON stock_movements(raw_material_id)`).run();
+
 
 export default db;
+

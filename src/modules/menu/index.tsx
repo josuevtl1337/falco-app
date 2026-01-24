@@ -11,6 +11,8 @@ import { OrderProduct } from "../hall/index.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { toast } from "sonner";
 
+import BulkPriceModal from "./cmp/bulk-price-modal";
+
 export type MenuViewProps = {
   products?: Product[];
   onSelect?: (product: Product) => void;
@@ -35,6 +37,7 @@ function MenuPage(props: Props) {
   const [data, setData] = useState<OrderProduct[]>([]);
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -165,13 +168,22 @@ function MenuPage(props: Props) {
             />
           </div>
 
-          <Button
-            variant="default"
-            className="hidden sm:inline-flex"
-            onClick={handleAddProduct}
-          >
-            Agregar Producto
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="hidden sm:inline-flex border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors"
+              onClick={() => setIsBulkModalOpen(true)}
+            >
+              Actualización Masiva
+            </Button>
+            <Button
+              variant="default"
+              className="hidden sm:inline-flex"
+              onClick={handleAddProduct}
+            >
+              Agregar Producto
+            </Button>
+          </div>
         </div>
 
         <Tabs value={currentCat} onValueChange={setCurrentCat} className="">
@@ -221,6 +233,14 @@ function MenuPage(props: Props) {
         onOpenChange={setIsFormOpen}
         item={editingItem}
         categories={categoriesList}
+        onSuccess={handleFormSuccess}
+      />
+
+      <BulkPriceModal
+        open={isBulkModalOpen}
+        onOpenChange={setIsBulkModalOpen}
+        categories={categoriesList}
+        products={data}
         onSuccess={handleFormSuccess}
       />
     </main>

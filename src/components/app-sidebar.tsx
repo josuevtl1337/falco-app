@@ -8,6 +8,7 @@ import {
   IconFolder,
   IconListDetails,
   IconReport,
+  IconPackage,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -51,6 +52,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Carta",
         url: RoutePaths.menu,
         icon: IconChartBar,
+      },
+      {
+        title: "Stock",
+        url: RoutePaths.stock,
+        icon: IconPackage,
       },
       {
         title: "Inventario",
