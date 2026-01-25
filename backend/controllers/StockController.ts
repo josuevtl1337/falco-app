@@ -3,6 +3,35 @@ import type { Response, Request } from "express";
 
 class StockController {
     /**
+     * POST /api/stock
+     * Crea un nuevo insumo
+     */
+    public async createStockItem(req: Request, res: Response) {
+        try {
+            const payload = req.body && req.body.body ? req.body.body : req.body;
+            const { name, purchase_unit, min_stock } = payload;
+
+            if (!name || !purchase_unit) {
+                return res.status(400).json({ error: "Name and unit are required" });
+            }
+
+            const id = StockModel.createStockItem(name, purchase_unit, min_stock);
+            if (!id) {
+                return res.status(500).json({ error: "Failed to create stock item" });
+            }
+
+            const newItem = StockModel.getStockById(id);
+            res.status(201).json(newItem);
+        } catch (error: any) {
+            console.error("Error creating stock item:", error);
+            return res.status(500).json({
+                success: false,
+                message: error?.message || "Internal server error",
+            });
+        }
+    }
+
+    /**
      * GET /api/stock
      * Obtiene todos los insumos con su stock actual
      */

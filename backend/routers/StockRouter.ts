@@ -4,6 +4,7 @@ import StockController from "../controllers/StockController.ts";
 const StockRouter = Router();
 
 // Stock endpoints
+StockRouter.post("/stock", StockController.createStockItem);
 StockRouter.get("/stock", StockController.getAllStock);
 StockRouter.get("/stock/low", StockController.getLowStock);
 StockRouter.get("/stock/:id", StockController.getStockById);

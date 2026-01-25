@@ -60,6 +60,27 @@ function getBaseUnit(unit: string): string {
 
 class StockModel {
     /**
+     * Crea un nuevo item de stock
+     */
+    public createStockItem(
+        name: string,
+        purchase_unit: string,
+        min_stock: number = 0
+    ): number | null {
+        try {
+            const stmt = db.prepare(`
+                INSERT INTO raw_materials (name, purchase_unit, min_stock, stock_quantity, active)
+                VALUES (?, ?, ?, 0, 1)
+            `);
+            const info = stmt.run(name, purchase_unit, min_stock);
+            return info.lastInsertRowid as number;
+        } catch (error) {
+            console.error("Error creating stock item:", error);
+            return null;
+        }
+    }
+
+    /**
      * Obtiene todos los insumos con su stock actual
      */
     public getAllStock(): IStockItem[] {

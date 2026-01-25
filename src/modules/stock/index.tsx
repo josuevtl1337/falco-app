@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { IconAlertTriangle, IconRefresh } from "@tabler/icons-react";
 import AddStockModal from "./components/add-stock-modal";
 
+import CreateStockModal from "./components/create-stock-modal";
+
 export interface StockItem {
   id: number;
   name: string;
@@ -22,6 +24,7 @@ function StockPage() {
   const [filter, setFilter] = useState<"all" | "low">("all");
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const fetchStock = useCallback(async () => {
     try {
@@ -94,8 +97,21 @@ function StockPage() {
     setModalOpen(true);
   };
 
+  const WHITELIST_ITEMS = [
+    "leche",
+    "el cafe",
+    "medialuna saladas en el local",
+    "medialuna saladas congeladas",
+    "medialuna dulce en el local",
+    "medialuna dulcecongeladas",
+    "pan de ciabatta",
+    "pan de chocolate",
+    "croissant",
+  ];
+
   const filteredStock =
-    filter === "all" ? stock : stock.filter((item) => item.status === "low");
+    (filter === "all" ? stock : stock.filter((item) => item.status === "low"))
+    .filter(item => WHITELIST_ITEMS.some(w => item.name.toLowerCase().includes(w)));
 
   const lowStockCount = stock.filter((item) => item.status === "low").length;
 
@@ -129,10 +145,15 @@ function StockPage() {
           </Button>
         </div>
 
-        <Button variant="outline" onClick={fetchStock} disabled={loading}>
-          <IconRefresh size={16} className={loading ? "animate-spin" : ""} />
-          <span className="ml-2">Actualizar</span>
-        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setCreateModalOpen(true)}>
+                + Crear Insumo
+            </Button>
+            <Button variant="outline" onClick={fetchStock} disabled={loading}>
+            <IconRefresh size={16} className={loading ? "animate-spin" : ""} />
+            <span className="ml-2">Actualizar</span>
+            </Button>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
@@ -167,6 +188,13 @@ function StockPage() {
         onOpenChange={setModalOpen}
         item={selectedItem}
         onConfirm={handleAddStock}
+      />
+
+      {/* Create Stock Modal */}
+      <CreateStockModal 
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={fetchStock}
       />
     </main>
   );

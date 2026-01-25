@@ -168,14 +168,16 @@ function MenuPage(props: Props) {
             />
           </div>
 
+        {!pickProduct && (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="hidden sm:inline-flex border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors"
-              onClick={() => setIsBulkModalOpen(true)}
-            >
-              Actualización Masiva
-            </Button>
+              <Button
+                variant="outline"
+                className="hidden sm:inline-flex border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors"
+                onClick={() => setIsBulkModalOpen(true)}
+              >
+                Actualización Masiva
+              </Button>
+          
             <Button
               variant="default"
               className="hidden sm:inline-flex"
@@ -184,6 +186,7 @@ function MenuPage(props: Props) {
               Agregar Producto
             </Button>
           </div>
+        )}
         </div>
 
         <Tabs value={currentCat} onValueChange={setCurrentCat} className="">
