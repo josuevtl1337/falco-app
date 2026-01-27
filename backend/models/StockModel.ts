@@ -60,7 +60,8 @@ function getBaseUnit(unit: string): string {
 
 class StockModel {
     /**
-     * Crea un nuevo item de stock
+     * Crea un nuevo item de stock.
+     * Crea la materia prima si no existe, o usa su ID, y luego crea registro en stock_inventory.
      */
     public createStockItem(
         name: string,
@@ -68,12 +69,23 @@ class StockModel {
         min_stock: number = 0
     ): number | null {
         try {
-            const stmt = db.prepare(`
-                INSERT INTO raw_materials (name, purchase_unit, min_stock, stock_quantity, active)
-                VALUES (?, ?, ?, 0, 1)
-            `);
-            const info = stmt.run(name, purchase_unit, min_stock);
-            return info.lastInsertRowid as number;
+            return db.transaction(() => {
+                // 1. Crear raw_material (datos maestros)
+                const stmt = db.prepare(`
+                    INSERT INTO raw_materials (name, purchase_unit, min_stock, stock_quantity, active, purchase_price, purchase_quantity, unit_cost)
+                    VALUES (?, ?, ?, 0, 1, 0, 0, 0)
+                `);
+                const info = stmt.run(name, purchase_unit, min_stock);
+                const rawMaterialId = info.lastInsertRowid as number;
+
+                // 2. Crear registro en stock_inventory
+                db.prepare(`
+                    INSERT INTO stock_inventory (raw_material_id, quantity, min_stock, active)
+                    VALUES (?, 0, ?, 1)
+                `).run(rawMaterialId, min_stock);
+
+                return rawMaterialId;
+            })();
         } catch (error) {
             console.error("Error creating stock item:", error);
             return null;
@@ -81,7 +93,25 @@ class StockModel {
     }
 
     /**
-     * Obtiene todos los insumos con su stock actual
+     * Elimina un item del stock (soft delete en stock_inventory).
+     * Mantiene la materia prima activa para costos.
+     */
+    public deleteStockItem(rawMaterialId: number): boolean {
+        try {
+            const result = db.prepare(`
+                UPDATE stock_inventory 
+                SET active = 0 
+                WHERE raw_material_id = ?
+            `).run(rawMaterialId);
+            return result.changes > 0;
+        } catch (error) {
+            console.error("Error deleting stock item:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene todos los insumos con su stock actual desde stock_inventory
      */
     public getAllStock(): IStockItem[] {
         const query = `
@@ -89,12 +119,13 @@ class StockModel {
         rm.id,
         rm.name,
         rm.purchase_unit,
-        COALESCE(rm.stock_quantity, 0) as stock_quantity,
-        COALESCE(rm.min_stock, 0) as min_stock,
+        COALESCE(si.quantity, 0) as stock_quantity,
+        COALESCE(si.min_stock, 0) as min_stock,
         s.name as supplier_name
-      FROM raw_materials rm
+      FROM stock_inventory si
+      JOIN raw_materials rm ON si.raw_material_id = rm.id
       LEFT JOIN suppliers s ON rm.supplier_id = s.id
-      WHERE rm.active = 1
+      WHERE si.active = 1
       ORDER BY rm.name
     `;
 
@@ -125,12 +156,13 @@ class StockModel {
         rm.id,
         rm.name,
         rm.purchase_unit,
-        COALESCE(rm.stock_quantity, 0) as stock_quantity,
-        COALESCE(rm.min_stock, 0) as min_stock,
+        COALESCE(si.quantity, 0) as stock_quantity,
+        COALESCE(si.min_stock, 0) as min_stock,
         s.name as supplier_name
-      FROM raw_materials rm
+      FROM stock_inventory si
+      JOIN raw_materials rm ON si.raw_material_id = rm.id
       LEFT JOIN suppliers s ON rm.supplier_id = s.id
-      WHERE rm.id = ?
+      WHERE rm.id = ? AND si.active = 1
     `;
 
         const item = db.prepare(query).get(id) as
@@ -153,14 +185,14 @@ class StockModel {
     }
 
     /**
-     * Actualiza el stock de un insumo
+     * Actualiza el stock de un insumo en stock_inventory
      */
     public updateStock(
         rawMaterialId: number,
         stockQuantity: number,
         minStock?: number
     ): boolean {
-        const updates: string[] = ["stock_quantity = ?"];
+        const updates: string[] = ["quantity = ?"];
         const values: any[] = [stockQuantity];
 
         if (minStock !== undefined) {
@@ -170,7 +202,7 @@ class StockModel {
 
         values.push(rawMaterialId);
 
-        const query = `UPDATE raw_materials SET ${updates.join(", ")} WHERE id = ?`;
+        const query = `UPDATE stock_inventory SET ${updates.join(", ")} WHERE raw_material_id = ?`;
         const result = db.prepare(query).run(...values);
         return result.changes > 0;
     }
@@ -184,12 +216,12 @@ class StockModel {
         notes?: string
     ): boolean {
         return db.transaction(() => {
-            // Actualizar stock
+            // Actualizar stock en stock_inventory
             db.prepare(
                 `
-        UPDATE raw_materials 
-        SET stock_quantity = COALESCE(stock_quantity, 0) + ? 
-        WHERE id = ?
+        UPDATE stock_inventory 
+        SET quantity = COALESCE(quantity, 0) + ? 
+        WHERE raw_material_id = ?
       `
             ).run(quantity, rawMaterialId);
 
@@ -332,6 +364,7 @@ class StockModel {
             if (!stock) continue;
 
             // Convertir stock a la misma unidad base
+            // NOTA: stock.stock_quantity viene ahora de stock_inventory
             const stockInBase = convertToBaseUnit(
                 stock.stock_quantity,
                 stock.purchase_unit
@@ -373,12 +406,12 @@ class StockModel {
                 const stockUnitBase = convertToBaseUnit(1, stockUnit);
                 const quantityInStockUnit = req.quantity / stockUnitBase;
 
-                // Descontar
+                // Descontar de stock_inventory
                 db.prepare(
                     `
-          UPDATE raw_materials 
-          SET stock_quantity = stock_quantity - ?
-          WHERE id = ?
+          UPDATE stock_inventory 
+          SET quantity = quantity - ?
+          WHERE raw_material_id = ?
         `
                 ).run(quantityInStockUnit, rawMaterialId);
 
@@ -398,6 +431,18 @@ class StockModel {
      */
     public getLowStockItems(): IStockItem[] {
         return this.getAllStock().filter((item) => item.status === "low");
+    }
+    /**
+     * Obtiene todas las materias primas (para recetas y selectores)
+     * Independiente de si tienen stock activo o no.
+     */
+    public getAllRawMaterials(): Array<{ id: number; name: string; purchase_unit: string }> {
+        return db.prepare(`
+            SELECT id, name, purchase_unit 
+            FROM raw_materials 
+            WHERE active = 1 
+            ORDER BY name
+        `).all() as Array<{ id: number; name: string; purchase_unit: string }>;
     }
 }
 

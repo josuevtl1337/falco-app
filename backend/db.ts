@@ -321,5 +321,47 @@ db.prepare(`
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_material ON stock_movements(raw_material_id)`).run();
 
 
+// Tabla de Inventario de Stock (separada de materias primas)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS stock_inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_material_id INTEGER NOT NULL UNIQUE REFERENCES raw_materials(id),
+    quantity REAL DEFAULT 0,
+    min_stock REAL DEFAULT 0,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_inventory_material ON stock_inventory(raw_material_id)`).run();
+
+// Migración: Mover datos de stock de raw_materials a stock_inventory
+try {
+  // Verificar si hay datos en raw_materials que no están en stock_inventory
+  const rowsToMigrate = db.prepare(`
+    SELECT id, stock_quantity, min_stock 
+    FROM raw_materials 
+    WHERE (stock_quantity > 0 OR min_stock > 0)
+    AND id NOT IN (SELECT raw_material_id FROM stock_inventory)
+  `).all() as Array<{ id: number, stock_quantity: number, min_stock: number }>;
+
+  if (rowsToMigrate.length > 0) {
+    console.log(`Migrating ${rowsToMigrate.length} items to stock_inventory...`);
+    const insert = db.prepare(`
+      INSERT INTO stock_inventory (raw_material_id, quantity, min_stock) 
+      VALUES (?, ?, ?)
+    `);
+
+    db.transaction(() => {
+      for (const row of rowsToMigrate) {
+        insert.run(row.id, row.stock_quantity || 0, row.min_stock || 0);
+      }
+    })();
+    console.log("Migration completed.");
+  }
+} catch (error) {
+  console.error("Error migrating stock inventory:", error);
+}
+
 export default db;
 

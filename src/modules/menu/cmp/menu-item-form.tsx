@@ -97,8 +97,8 @@ export default function MenuItemForm({
 
   useEffect(() => {
     if (open) {
-      // Fetch available stock items
-      fetch("http://localhost:3001/api/stock")
+      // Fetch available raw materials (ingredients)
+      fetch("http://localhost:3001/api/stock/raw-materials")
         .then(res => res.json())
         .then(data => setStockItems(data))
         .catch(err => console.error("Error loading stock:", err));

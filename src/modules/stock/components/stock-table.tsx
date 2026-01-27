@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { IconPlus, IconDeviceFloppy } from "@tabler/icons-react";
+import { IconPlus, IconDeviceFloppy, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 import type { StockItem } from "../index";
 
@@ -18,6 +18,7 @@ interface StockTableProps {
   loading: boolean;
   onAddStock: (item: StockItem) => void;
   onUpdateStock: (id: number, stockQuantity: number, minStock: number) => void;
+  onDeleteStock: (id: number) => void;
 }
 
 function StockTable({
@@ -25,6 +26,7 @@ function StockTable({
   loading,
   onAddStock,
   onUpdateStock,
+  onDeleteStock,
 }: StockTableProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValues, setEditValues] = useState<{
@@ -180,6 +182,14 @@ function StockTable({
                     </>
                   ) : (
                     <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        onClick={() => onDeleteStock(item.id)}
+                      >
+                        <IconTrash size={16} />
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
