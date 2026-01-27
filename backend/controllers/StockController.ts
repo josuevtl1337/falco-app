@@ -71,7 +71,7 @@ class StockController {
      */
     public async getStockById(req: Request, res: Response) {
         try {
-            const id = parseInt(req.params.id);
+            const id = parseInt(req.params.id || "");
             const stock = StockModel.getStockById(id);
             if (!stock) {
                 return res.status(404).json({ error: "Stock item not found" });
@@ -92,7 +92,7 @@ class StockController {
      */
     public async updateStock(req: Request, res: Response) {
         try {
-            const id = parseInt(req.params.id);
+            const id = parseInt(req.params.id || "");
             const payload = req.body && req.body.body ? req.body.body : req.body;
             const { stock_quantity, min_stock } = payload;
 
@@ -113,12 +113,33 @@ class StockController {
     }
 
     /**
+     * DELETE /api/stock/:id
+     * Elimina un insumo del inventario (soft delete)
+     */
+    public async deleteStockItem(req: Request, res: Response) {
+        try {
+            const id = parseInt(req.params.id || "");
+            const success = StockModel.deleteStockItem(id);
+            if (!success) {
+                return res.status(404).json({ error: "Stock item not found" });
+            }
+            res.json({ success: true, message: "Stock item deleted" });
+        } catch (error: any) {
+            console.error("Error deleting stock item:", error);
+            return res.status(500).json({
+                success: false,
+                message: error?.message || "Internal server error",
+            });
+        }
+    }
+
+    /**
      * POST /api/stock/:id/add
      * Agrega stock a un insumo
      */
     public async addStock(req: Request, res: Response) {
         try {
-            const id = parseInt(req.params.id);
+            const id = parseInt(req.params.id || "");
             const payload = req.body && req.body.body ? req.body.body : req.body;
             const { quantity, notes } = payload;
 
@@ -221,6 +242,22 @@ class StockController {
         } catch (error: any) {
             console.error("Error setting menu item ingredients:", error);
             return res.status(500).json({
+                success: false,
+                message: error?.message || "Internal server error",
+            });
+        }
+    }
+    /**
+     * GET /api/stock/raw-materials
+     * Obtiene todas las materias primas
+     */
+    public async getAllRawMaterials(req: Request, res: Response) {
+        try {
+            const materials = StockModel.getAllRawMaterials();
+            res.json(materials);
+        } catch (error: any) {
+            console.error("Error getting raw materials:", error);
+            res.status(500).json({
                 success: false,
                 message: error?.message || "Internal server error",
             });

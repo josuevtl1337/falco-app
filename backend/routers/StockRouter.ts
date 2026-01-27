@@ -6,9 +6,11 @@ const StockRouter = Router();
 // Stock endpoints
 StockRouter.post("/stock", StockController.createStockItem);
 StockRouter.get("/stock", StockController.getAllStock);
+StockRouter.get("/stock/raw-materials", StockController.getAllRawMaterials);
 StockRouter.get("/stock/low", StockController.getLowStock);
 StockRouter.get("/stock/:id", StockController.getStockById);
 StockRouter.put("/stock/:id", StockController.updateStock);
+StockRouter.delete("/stock/:id", StockController.deleteStockItem);
 StockRouter.post("/stock/:id/add", StockController.addStock);
 StockRouter.post("/stock/validate", StockController.validateStock);
 

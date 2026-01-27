@@ -145,6 +145,48 @@ export const OrderModel = {
     return parsedOrders;
   },
 
+  getHistory: (filters: { date?: string } = {}) => {
+    let query = `
+       SELECT
+         o.*,
+         pm.name as payment_method_name,
+         json_group_array(
+           json_object(
+             'menu_item_id', oi.menu_item_id,
+             'menu_item_name', mi.name,
+             'quantity', oi.quantity,
+             'unit_price', oi.unit_price,
+             'subtotal', oi.subtotal
+           )
+         ) AS items
+       FROM orders o
+       LEFT JOIN order_items oi ON o.id = oi.order_id
+       LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+       LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
+       WHERE 1=1
+    `;
+
+    const params: any[] = [];
+
+    if (filters.date) {
+      // SQLite date function to match YYYY-MM-DD
+      query += " AND date(o.created_at) = ?";
+      params.push(filters.date);
+    }
+
+    query += `
+       GROUP BY o.id
+       ORDER BY o.created_at DESC
+    `;
+
+    const orders: any[] = db.prepare(query).all(...params);
+
+    return orders.map((order) => ({
+      ...order,
+      items: JSON.parse(order.items || "[]"),
+    }));
+  },
+
   getById: (id: number) => {
     return db
       .prepare(

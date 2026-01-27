@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 // } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DailyOrdersTable from "./daily-orders-table";
 // import { CalendarIcon } from "lucide-react";
 // import { format } from "date-fns";
 // import { es } from "date-fns/locale";
@@ -19,6 +20,12 @@ export default function DailyMetrics() {
   const [timeFilter, setTimeFilter] = useState<string>("today");
 
   const [data] = useReports(timeFilter, shift);
+
+  function getTodayString() {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; //offset in milliseconds
+    const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+    return localISOTime;
+}
 
   // const [dateRange, setDateRange] = useState<DateRange | undefined>({
   //   from: new Date(2025, 5, 12),
@@ -264,8 +271,11 @@ export default function DailyMetrics() {
         <CardHeader>
           <CardTitle className="text-lg">Detalles</CardTitle>
         </CardHeader>
-        <CardContent className="h-64 flex items-center justify-center text-slate-400">
-          <p className="text-center">Proximamente: tabla con las ordenes</p>
+        <CardContent>
+            {/* Solo mostrar tabla si el filtro es "today", "yesterday" o similar que mapee a un dia especifico 
+                Para simplificar, mostramos la tabla de HOY por defecto o filtrada si 'timeFilter' es 'today'.
+            */}
+          <DailyOrdersTable date={timeFilter === "today" ? getTodayString() : undefined} />
         </CardContent>
       </Card>
     </div>

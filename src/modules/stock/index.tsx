@@ -97,22 +97,6 @@ function StockPage() {
     setModalOpen(true);
   };
 
-  const WHITELIST_ITEMS = [
-    "leche",
-    "el cafe",
-    "medialuna saladas en el local",
-    "medialuna saladas congeladas",
-    "medialuna dulce en el local",
-    "medialuna dulcecongeladas",
-    "pan de ciabatta",
-    "pan de chocolate",
-    "croissant",
-  ];
-
-  const filteredStock =
-    (filter === "all" ? stock : stock.filter((item) => item.status === "low"))
-    .filter(item => WHITELIST_ITEMS.some(w => item.name.toLowerCase().includes(w)));
-
   const lowStockCount = stock.filter((item) => item.status === "low").length;
 
   return (
@@ -176,10 +160,24 @@ function StockPage() {
 
       {/* Stock Table */}
       <StockTable
-        items={filteredStock}
+        items={stock}
         loading={loading}
         onAddStock={openAddModal}
         onUpdateStock={handleUpdateStock}
+        onDeleteStock={async (id) => {
+          if (!window.confirm("¿Estás seguro de que quieres eliminar este insumo del inventario? Esta acción no borrará la materia prima.")) return;
+          try {
+            const response = await fetch(`http://localhost:3001/api/stock/${id}`, {
+              method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Error deleting stock item");
+            toast.success("Insumo eliminado del inventario");
+            fetchStock();
+          } catch (error) {
+            console.error("Error deleting stock:", error);
+            toast.error("Error al eliminar insumo");
+          }
+        }}
       />
 
       {/* Add Stock Modal */}

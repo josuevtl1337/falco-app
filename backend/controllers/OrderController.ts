@@ -38,6 +38,22 @@ class OrderController {
     }
   }
 
+  public async getOrderHistory(req: Request, res: Response) {
+    try {
+      const date = req.query.date as string | undefined;
+      // If no date is provided, maybe default to today? Or all history?
+      // For now, if no date, return all history (be careful with size).
+      // Let's interpret no date as "all", or client must ensure they send it.
+      const orders = OrderModel.getHistory({ date });
+      res.json(orders);
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        message: error?.message || "Internal server error",
+      });
+    }
+  }
+
   public async updateOrderStatus(req: Request, res: Response) {
     try {
       const payload = req.body && req.body.body ? req.body.body : req.body;

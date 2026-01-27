@@ -70,7 +70,10 @@ export default function CalibrationHistoryTab() {
   const [coffeeId, setCoffeeId] = React.useState<number | undefined>(undefined);
   const [method, setMethod] = React.useState<Method | "all">("all");
   const [favOnly, setFavOnly] = React.useState(false);
-  const [range, setRange] = React.useState<DateRange>({});
+  const [range, setRange] = React.useState<DateRange>({
+    from: new Date(),
+    to: new Date(),
+  });
 
   // ------------ datos ------------
   const [rows, setRows] = React.useState<HistoryRow[]>([]);
