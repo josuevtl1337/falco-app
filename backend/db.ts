@@ -363,5 +363,22 @@ try {
   console.error("Error migrating stock inventory:", error);
 }
 
+// ============================================
+// MÓDULO REPORTES - Tabla de gastos para reportes
+// ============================================
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS report_expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    amount REAL NOT NULL,
+    category TEXT NOT NULL CHECK (category IN ('servicios', 'proveedores', 'supermercado', 'otros')),
+    description TEXT DEFAULT '',
+    date TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_date ON report_expenses(date)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_category ON report_expenses(category)`).run();
+
 export default db;
 
