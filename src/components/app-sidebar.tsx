@@ -3,12 +3,9 @@ import {
   IconCalculatorFilled,
   IconChartBar,
   IconDashboard,
-  IconDatabase,
   IconFlask,
-  IconFolder,
   IconListDetails,
   IconReport,
-  IconPackage,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -53,16 +50,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: RoutePaths.menu,
         icon: IconChartBar,
       },
-      {
-        title: "Stock",
-        url: RoutePaths.stock,
-        icon: IconPackage,
-      },
-      {
-        title: "Inventario",
-        url: RoutePaths.products,
-        icon: IconFolder,
-      },
     ],
     navSecondary: [
       {
@@ -79,11 +66,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         name: "Calibracion",
         url: RoutePaths.calibration,
         icon: IconFlask,
-      },
-      {
-        name: "Finanzas",
-        url: RoutePaths.budget,
-        icon: IconDatabase,
       },
       {
         name: "Reportes",
