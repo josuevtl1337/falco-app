@@ -1,10 +1,9 @@
 import * as React from "react";
 import {
+  IconCalculatorFilled,
   IconChartBar,
   IconDashboard,
-  IconDatabase,
   IconFlask,
-  IconFolder,
   IconListDetails,
   IconReport,
 } from "@tabler/icons-react";
@@ -13,7 +12,7 @@ import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
-import { Coffee, MoonIcon } from "lucide-react";
+import { MoonIcon } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -38,23 +37,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     navMain: [
       {
         title: "Resumen",
-        url: "#",
+        url: RoutePaths.resume,
         icon: IconDashboard,
       },
       {
         title: "Salon",
-        url: RoutePaths.hall,
+        url: RoutePaths.createOrder,
         icon: IconListDetails,
       },
       {
         title: "Carta",
         url: RoutePaths.menu,
         icon: IconChartBar,
-      },
-      {
-        title: "Inventario",
-        url: RoutePaths.products,
-        icon: IconFolder,
       },
     ],
     navSecondary: [
@@ -74,14 +68,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: IconFlask,
       },
       {
-        name: "Finanzas",
-        url: RoutePaths.budget,
-        icon: IconDatabase,
+        name: "Reportes",
+        url: RoutePaths.reports,
+        icon: IconReport,
       },
       {
-        name: "Reportes",
-        url: RoutePaths.orders,
-        icon: IconReport,
+        name: "Motor de Costos",
+        url: RoutePaths.costEngine,
+        icon: IconCalculatorFilled,
       },
     ],
   };
@@ -95,12 +89,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5 text-[var(--primary)]"
             >
-              <a href="#">
-                {/* <Coffee className="!size-5" /> */}
-                <span className="text-base font-semibold logo-font text-[var(--primary)]">
-                  Falco
-                </span>
-              </a>
+              {/* <Coffee className="!size-5" /> */}
+              <span className="text-base font-semibold logo-font text-[var(--primary)]">
+                Falco
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

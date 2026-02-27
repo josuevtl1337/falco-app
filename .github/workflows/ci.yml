@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # Frontend
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npx vite build
+
+      # Backend
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+
+      - name: Check backend starts
+        run: |
+          cd backend
+          timeout 5 npx tsx server.ts &
+          sleep 3
+          curl -f http://localhost:3001/api/categories || exit 1
+          kill %1 2>/dev/null || true

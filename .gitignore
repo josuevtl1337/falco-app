@@ -10,3 +10,11 @@ src-tauri/target/
 src-tauri/.cargo/
 
 backend/node_modules/
+
+# bases de datos locales
+*.db
+backend/app.db
+backend/*.db
+
+# backups (si los tenés)
+backups/

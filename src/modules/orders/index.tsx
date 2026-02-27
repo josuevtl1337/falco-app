@@ -1,8 +1,4 @@
-interface Props {}
-
-function OrdersPage(props: Props) {
-  const {} = props;
-
+function OrdersPage() {
   return (
     <main>
       <p>Orders Page</p>

@@ -70,7 +70,10 @@ export default function CalibrationHistoryTab() {
   const [coffeeId, setCoffeeId] = React.useState<number | undefined>(undefined);
   const [method, setMethod] = React.useState<Method | "all">("all");
   const [favOnly, setFavOnly] = React.useState(false);
-  const [range, setRange] = React.useState<DateRange>({});
+  const [range, setRange] = React.useState<DateRange>({
+    from: new Date(),
+    to: new Date(),
+  });
 
   // ------------ datos ------------
   const [rows, setRows] = React.useState<HistoryRow[]>([]);
@@ -143,7 +146,7 @@ export default function CalibrationHistoryTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {coffees.map((c) => (
+                {coffees && coffees.length > 0 && coffees.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.name} — {c.benefit}
                     {c.origin ? ` — ${c.origin}` : ""}
@@ -327,9 +330,9 @@ export default function CalibrationHistoryTab() {
           <div className="text-sm text-muted-foreground">
             {total > 0
               ? `Mostrando ${(page - 1) * PER_PAGE + 1}–${Math.min(
-                  page * PER_PAGE,
-                  total
-                )} de ${total}`
+                page * PER_PAGE,
+                total
+              )} de ${total}`
               : "0 resultados"}
           </div>
           <div className="flex gap-2">

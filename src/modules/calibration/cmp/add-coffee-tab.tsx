@@ -44,8 +44,6 @@ function AddCoffeeTab() {
   });
 
   const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    console.log("Form Data:", data);
-
     fetch("http://localhost:3001/api/calibration/add-coffee", {
       method: "POST",
       headers: {

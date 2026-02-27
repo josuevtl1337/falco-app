@@ -31,5 +31,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/josuevtl1337/falco-app/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlDOTc5NUI3MkFEOUJDRgpSV1RQbTYxeVczbkpDWS9uQ0YySUI3S2ZuUWJiK1Q0THJ4QmY2emd6cXJiZEVjNVhNWXJ6SEtNSwo="
+    }
   }
 }
