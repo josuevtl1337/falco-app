@@ -1,5 +1,5 @@
 app = "falco-app"
-primary_region = "scl"
+primary_region = "gru"
 
 [build]
 
