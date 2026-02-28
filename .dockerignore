@@ -1,8 +1,0 @@
-node_modules/
-backend/node_modules/
-src-tauri/
-.git/
-.claude/
-.github/
-dist/
-*.db

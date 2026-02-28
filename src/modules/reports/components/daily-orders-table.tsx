@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
-import { API_BASE } from "@/lib/api";
 // import { format } from "date-fns";
 
 interface OrderItem {
@@ -43,7 +42,7 @@ export default function DailyOrdersTable({ date }: DailyOrdersTableProps) {
     // We can just fetch all history for now or pass today's date YYYY-MM-DD.
     
     // Construct query
-    let url = `${API_BASE}/get-history`;
+    let url = "http://localhost:3001/api/get-history";
     if (date) {
         url += `?date=${date}`;
     }

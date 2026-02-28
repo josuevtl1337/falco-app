@@ -31,7 +31,6 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
-import { API_BASE } from "@/lib/api";
 
 type Method = "espresso" | "filter";
 
@@ -84,7 +83,7 @@ export default function CalibrationHistoryTab() {
 
   // cargar cafés para el select
   React.useEffect(() => {
-    fetch(`${API_BASE}/calibration/get-coffees`)
+    fetch("http://localhost:3001/api/calibration/get-coffees")
       .then((r) => r.json())
       .then((data: Coffee[]) => setCoffees(data ?? []))
       .catch(() => setCoffees([]));
@@ -103,7 +102,7 @@ export default function CalibrationHistoryTab() {
 
     setLoading(true);
     fetch(
-      `${API_BASE}/calibration/get-calibrations?${params.toString()}`
+      `http://localhost:3001/api/calibration/get-calibrations?${params.toString()}`
     )
       .then((r) => r.json())
       .then((data: { items: HistoryRow[]; total: number }) => {

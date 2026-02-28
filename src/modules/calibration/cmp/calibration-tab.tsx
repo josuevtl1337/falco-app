@@ -36,7 +36,6 @@ import { formatRatio } from "../utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { API_BASE } from "@/lib/api";
 
 interface ICoffeesRes {
   id: number;
@@ -77,7 +76,7 @@ function CalibrationTab() {
   }, []);
 
   const fetchCoffees = () => {
-    fetch(`${API_BASE}/calibration/get-coffees`)
+    fetch("http://localhost:3001/api/calibration/get-coffees")
       .then((res) => res.json())
       .then((data) => {
         setCoffes(data);
@@ -122,7 +121,7 @@ function CalibrationTab() {
       evaluation: data.evaluation,
     };
 
-    fetch(`${API_BASE}/calibration/add-tasting`, {
+    fetch("http://localhost:3001/api/calibration/add-tasting", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

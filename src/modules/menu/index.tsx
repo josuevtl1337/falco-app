@@ -10,7 +10,6 @@ import { IMenuItem as Product } from "../../../backend/models/MenuModel.ts";
 import { OrderProduct } from "../hall/index.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { toast } from "sonner";
-import { API_BASE } from "@/lib/api";
 
 import BulkPriceModal from "./cmp/bulk-price-modal";
 
@@ -44,8 +43,8 @@ function MenuPage(props: Props) {
   useEffect(() => {
     // Cargar productos y categorías
     Promise.all([
-      fetch(`${API_BASE}/get-menu-items`),
-      fetch(`${API_BASE}/categories`),
+      fetch("http://localhost:3001/api/get-menu-items"),
+      fetch("http://localhost:3001/api/categories"),
     ])
       .then(([productsRes, categoriesRes]) =>
         Promise.all([productsRes.json(), categoriesRes.json()]),
@@ -104,7 +103,7 @@ function MenuPage(props: Props) {
 
     try {
       const response = await fetch(
-        `${API_BASE}/menu-items/${product.id}`,
+        `http://localhost:3001/api/menu-items/${product.id}`,
         {
           method: "DELETE",
         },
@@ -117,7 +116,7 @@ function MenuPage(props: Props) {
 
       toast.success("Producto eliminado correctamente");
       // Recargar la lista
-      fetch(`${API_BASE}/get-menu-items`)
+      fetch("http://localhost:3001/api/get-menu-items")
         .then((res) => res.json())
         .then((data) => {
           setData(data);
@@ -134,7 +133,7 @@ function MenuPage(props: Props) {
 
   const handleFormSuccess = () => {
     // Recargar la lista de productos
-    fetch(`${API_BASE}/get-menu-items`)
+    fetch("http://localhost:3001/api/get-menu-items")
       .then((res) => res.json())
       .then((data) => {
         setData(data);

@@ -28,7 +28,6 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { API_BASE } from "@/lib/api";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -99,7 +98,7 @@ export default function MenuItemForm({
   useEffect(() => {
     if (open) {
       // Fetch available raw materials (ingredients)
-      fetch(`${API_BASE}/stock/raw-materials`)
+      fetch("http://localhost:3001/api/stock/raw-materials")
         .then(res => res.json())
         .then(data => setStockItems(data))
         .catch(err => console.error("Error loading stock:", err));
@@ -107,7 +106,7 @@ export default function MenuItemForm({
 
     if (open && item) {
       // Fetch existing recipe
-      fetch(`${API_BASE}/stock/menu-item-recipes/${item.id}`)
+      fetch(`http://localhost:3001/api/stock/menu-item-recipes/${item.id}`)
         .then(res => res.json())
         .then((data: any[]) => {
           const mapped = data.map(d => ({
@@ -175,7 +174,7 @@ export default function MenuItemForm({
         unit: r.unit
       }));
 
-      await fetch(`${API_BASE}/stock/menu-item-recipes/${item.id}`, {
+      await fetch(`http://localhost:3001/api/stock/menu-item-recipes/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ingredients })
@@ -190,8 +189,8 @@ export default function MenuItemForm({
   const onSubmit = async (data: FormData) => {
     try {
       const url = isEditing
-        ? `${API_BASE}/menu-items/${item?.id}`
-        : `${API_BASE}/menu-items`;
+        ? `http://localhost:3001/api/menu-items/${item?.id}`
+        : "http://localhost:3001/api/menu-items";
 
       const method = isEditing ? "PUT" : "POST";
 

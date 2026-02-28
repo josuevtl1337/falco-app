@@ -20,7 +20,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
-import { API_BASE } from "@/lib/api";
 
 const BENEFITS = [
   { value: "washed", label: "Lavado" },
@@ -45,7 +44,7 @@ function AddCoffeeTab() {
   });
 
   const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    fetch(`${API_BASE}/calibration/add-coffee`, {
+    fetch("http://localhost:3001/api/calibration/add-coffee", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
