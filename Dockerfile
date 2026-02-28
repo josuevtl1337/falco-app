@@ -13,7 +13,7 @@ FROM node:22-slim AS backend-deps
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
 RUN apt-get update && apt-get install -y python3 make g++ libcups2-dev && rm -rf /var/lib/apt/lists/*
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Stage 3: Runtime
 FROM node:22-slim
