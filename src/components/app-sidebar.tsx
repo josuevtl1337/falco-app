@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { RoutePaths } from "@/routes/paths";
 import { useTheme } from "@/modules/commons/theme/theme-provider";
+import StockAlertBadge from "@/modules/stock/components/stock-alert-badge";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setTheme, theme } = useTheme();
@@ -82,6 +83,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         name: "Control de Stock",
         url: RoutePaths.stockControl,
         icon: IconPackage,
+        badge: <StockAlertBadge />,
       },
     ],
   };

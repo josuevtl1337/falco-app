@@ -269,6 +269,19 @@ db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_category ON report_ex
 // MÓDULO STOCK - Control de Stock
 // ============================================
 
+// Migration: drop old stock tables that used raw_material_id (incompatible schema)
+try {
+  const stockMovCols = db.prepare("PRAGMA table_info(stock_movements)").all() as Array<{ name: string }>;
+  if (stockMovCols.some(col => col.name === "raw_material_id")) {
+    console.log("⚠ Detected old stock schema, migrating…");
+    db.prepare("DROP TABLE IF EXISTS stock_movements").run();
+    db.prepare("DROP TABLE IF EXISTS stock_inventory").run();
+    console.log("✓ Dropped legacy stock tables (stock_movements, stock_inventory)");
+  }
+} catch {
+  // Tables don't exist yet — nothing to migrate
+}
+
 // Productos de stock (ej: "Medialunas Dulces", "Croissants")
 db.prepare(`
   CREATE TABLE IF NOT EXISTS stock_products (

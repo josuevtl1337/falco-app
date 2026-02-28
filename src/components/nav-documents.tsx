@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { type Icon } from "@tabler/icons-react";
 
 import {
@@ -18,6 +19,7 @@ export function NavDocuments({
     name: string;
     url: string;
     icon: Icon;
+    badge?: ReactNode;
   }[];
 }) {
   return (
@@ -30,6 +32,9 @@ export function NavDocuments({
               <NavLink to={item.url}>
                 <item.icon />
                 <span>{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto">{item.badge}</span>
+                )}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
