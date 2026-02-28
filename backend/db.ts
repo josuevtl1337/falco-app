@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 
-const db: any = new Database("app.db");
+const dbPath = process.env.DB_PATH || "app.db";
+const db: any = new Database(dbPath);
 
 // Tabla de cafés (usada por calibraciones)
 db.prepare(`

@@ -29,8 +29,9 @@ import { Plus, Pencil, Trash2, Calculator, Search } from "lucide-react";
 import { ICostProduct, IRecipe, IRawMaterial, FixedCostType } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = "http://localhost:3001/api/cost-engine";
+const API_BASE_CE = `${API_BASE}/cost-engine`;
 
 function ProductsTab() {
   const [products, setProducts] = useState<ICostProduct[]>([]);
@@ -59,7 +60,7 @@ function ProductsTab() {
 
   const fetchRawMaterials = async () => {
     try {
-      const response = await fetch(`${API_BASE}/raw-materials`);
+      const response = await fetch(`${API_BASE_CE}/raw-materials`);
       const data = await response.json();
       setRawMaterials(data);
     } catch (error) {
@@ -69,7 +70,7 @@ function ProductsTab() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${API_BASE}/products`);
+      const response = await fetch(`${API_BASE_CE}/products`);
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -79,7 +80,7 @@ function ProductsTab() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch(`${API_BASE}/recipes`);
+      const response = await fetch(`${API_BASE_CE}/recipes`);
       const data = await response.json();
       setRecipes(data);
     } catch (error) {
@@ -91,8 +92,8 @@ function ProductsTab() {
     e.preventDefault();
     try {
       const url = editingProduct
-        ? `${API_BASE}/products/${editingProduct.id}`
-        : `${API_BASE}/products`;
+        ? `${API_BASE_CE}/products/${editingProduct.id}`
+        : `${API_BASE_CE}/products`;
       const method = editingProduct ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -154,7 +155,7 @@ function ProductsTab() {
     if (!window.confirm("¿Estás seguro de eliminar este producto?")) return;
 
     try {
-      const response = await fetch(`${API_BASE}/products/${id}`, {
+      const response = await fetch(`${API_BASE_CE}/products/${id}`, {
         method: "DELETE",
       });
 
@@ -171,7 +172,7 @@ function ProductsTab() {
 
   const handleRecalculate = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE}/products/${id}/recalculate`, {
+      const response = await fetch(`${API_BASE_CE}/products/${id}/recalculate`, {
         method: "POST",
       });
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE } from "@/lib/api";
 
 interface ReportsData {
   date?: string;
@@ -42,7 +43,7 @@ const useReports = (
       setError(null);
       try {
         const res = await fetch(
-          `http://localhost:3001/api/report/report-daily?date=${dateStr}&shift=${shift || "both"
+          `${API_BASE}/report/report-daily?date=${dateStr}&shift=${shift || "both"
           }`
         );
         const contentType = res.headers.get("content-type") || "";

@@ -30,8 +30,9 @@ import { Plus, Pencil, Trash2, Calculator } from "lucide-react";
 import { IRecipe, IRawMaterial, UnitType } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = "http://localhost:3001/api/cost-engine";
+const API_BASE_CE = `${API_BASE}/cost-engine`;
 
 function RecipesTab() {
   const [recipes, setRecipes] = useState<IRecipe[]>([]);
@@ -63,7 +64,7 @@ function RecipesTab() {
 
   // const fetchSuppliers = async () => {
   //   try {
-  //     const response = await fetch(`${API_BASE}/suppliers`);
+  //     const response = await fetch(`${API_BASE_CE}/suppliers`);
   //     const data = await response.json();
   //     setSuppliers(data);
   //   } catch (error) {
@@ -73,7 +74,7 @@ function RecipesTab() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch(`${API_BASE}/recipes`);
+      const response = await fetch(`${API_BASE_CE}/recipes`);
       const data = await response.json();
       setRecipes(data);
     } catch (error) {
@@ -83,7 +84,7 @@ function RecipesTab() {
 
   const fetchRawMaterials = async () => {
     try {
-      const response = await fetch(`${API_BASE}/raw-materials`);
+      const response = await fetch(`${API_BASE_CE}/raw-materials`);
       const data = await response.json();
       setRawMaterials(data);
     } catch (error) {
@@ -132,8 +133,8 @@ function RecipesTab() {
 
     try {
       const url = editingRecipe
-        ? `${API_BASE}/recipes/${editingRecipe.id}`
-        : `${API_BASE}/recipes`;
+        ? `${API_BASE_CE}/recipes/${editingRecipe.id}`
+        : `${API_BASE_CE}/recipes`;
       const method = editingRecipe ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -187,7 +188,7 @@ function RecipesTab() {
     if (!window.confirm("¿Estás seguro de eliminar esta receta?")) return;
 
     try {
-      const response = await fetch(`${API_BASE}/recipes/${id}`, {
+      const response = await fetch(`${API_BASE_CE}/recipes/${id}`, {
         method: "DELETE",
       });
 
@@ -204,7 +205,7 @@ function RecipesTab() {
 
   const handleRecalculate = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE}/recipes/${id}/recalculate`, {
+      const response = await fetch(`${API_BASE_CE}/recipes/${id}/recalculate`, {
         method: "POST",
       });
 

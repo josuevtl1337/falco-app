@@ -29,8 +29,9 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { IRawMaterial, ISupplier, UnitType } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = "http://localhost:3001/api/cost-engine";
+const API_BASE_CE = `${API_BASE}/cost-engine`;
 
 function RawMaterialsTab() {
   const [materials, setMaterials] = useState<IRawMaterial[]>([]);
@@ -56,7 +57,7 @@ function RawMaterialsTab() {
 
   const fetchMaterials = async () => {
     try {
-      const response = await fetch(`${API_BASE}/raw-materials`);
+      const response = await fetch(`${API_BASE_CE}/raw-materials`);
       const data = await response.json();
       setMaterials(data);
     } catch (error) {
@@ -66,7 +67,7 @@ function RawMaterialsTab() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch(`${API_BASE}/suppliers`);
+      const response = await fetch(`${API_BASE_CE}/suppliers`);
       const data = await response.json();
       setSuppliers(data);
     } catch (error) {
@@ -78,8 +79,8 @@ function RawMaterialsTab() {
     e.preventDefault();
     try {
       const url = editingMaterial
-        ? `${API_BASE}/raw-materials/${editingMaterial.id}`
-        : `${API_BASE}/raw-materials`;
+        ? `${API_BASE_CE}/raw-materials/${editingMaterial.id}`
+        : `${API_BASE_CE}/raw-materials`;
       const method = editingMaterial ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -132,7 +133,7 @@ function RawMaterialsTab() {
       return;
 
     try {
-      const response = await fetch(`${API_BASE}/raw-materials/${id}`, {
+      const response = await fetch(`${API_BASE_CE}/raw-materials/${id}`, {
         method: "DELETE",
       });
 
