@@ -265,4 +265,64 @@ db.prepare(`
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_date ON report_expenses(date)`).run();
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_category ON report_expenses(category)`).run();
 
+// ============================================
+// MÓDULO STOCK - Control de Stock
+// ============================================
+
+// Migration: drop old stock tables that used raw_material_id (incompatible schema)
+try {
+  const stockMovCols = db.prepare("PRAGMA table_info(stock_movements)").all() as Array<{ name: string }>;
+  if (stockMovCols.some(col => col.name === "raw_material_id")) {
+    console.log("⚠ Detected old stock schema, migrating…");
+    db.prepare("DROP TABLE IF EXISTS stock_movements").run();
+    db.prepare("DROP TABLE IF EXISTS stock_inventory").run();
+    console.log("✓ Dropped legacy stock tables (stock_movements, stock_inventory)");
+  }
+} catch {
+  // Tables don't exist yet — nothing to migrate
+}
+
+// Productos de stock (ej: "Medialunas Dulces", "Croissants")
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS stock_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    current_stock INTEGER NOT NULL DEFAULT 0,
+    alert_threshold INTEGER NOT NULL DEFAULT 5,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+// Mapeo stock ↔ ítems del menú (many-to-many)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS stock_menu_item_map (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_product_id INTEGER NOT NULL REFERENCES stock_products(id) ON DELETE CASCADE,
+    menu_item_id INTEGER NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(stock_product_id, menu_item_id)
+  )
+`).run();
+
+// Historial de movimientos de stock
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS stock_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stock_product_id INTEGER NOT NULL REFERENCES stock_products(id) ON DELETE CASCADE,
+    quantity_change INTEGER NOT NULL,
+    previous_stock INTEGER NOT NULL,
+    new_stock INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_menu_map_product ON stock_menu_item_map(stock_product_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_menu_map_item ON stock_menu_item_map(menu_item_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(stock_product_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_order ON stock_movements(order_id)`).run();
+
 export default db;

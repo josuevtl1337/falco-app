@@ -1,4 +1,5 @@
 import { OrderModel, type Order } from "../models/OrderModel.ts";
+import { StockModel } from "../models/StockModel.ts";
 import type { Response, Request } from "express";
 
 class OrderController {
@@ -57,6 +58,20 @@ class OrderController {
   public async updateOrderStatus(req: Request, res: Response) {
     try {
       const payload = req.body && req.body.body ? req.body.body : req.body;
+
+      // If paying, deduct stock BEFORE updating order status (atomic validation)
+      if (payload.status === "paid" && payload.id) {
+        try {
+          StockModel.deductStockForOrder(Number(payload.id));
+        } catch (stockError: any) {
+          // If stock insufficient, return error without updating order
+          return res.status(400).json({
+            error: "Stock insuficiente",
+            message: stockError.message,
+          });
+        }
+      }
+
       const result = OrderModel.updateStatus(payload);
 
       if (!result.changes) {
