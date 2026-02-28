@@ -6,8 +6,9 @@ import type {
     ReportExpense,
     AddExpensePayload,
 } from "../types";
+import { API_BASE } from "@/lib/api";
 
-const API = "http://localhost:3001/api/report";
+const API = `${API_BASE}/report`;
 
 // ==============================
 // Monthly report hook

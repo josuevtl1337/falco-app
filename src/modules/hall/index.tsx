@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import CheckoutView from "./cmp/checkout/checkout-view";
 import { PaymentData } from "./cmp/checkout/payment-section";
 import { ShiftContext } from "@/App";
+import { API_BASE } from "@/lib/api";
 
 export enum OrderState {
   CREATE_ORDER = "CREATE_ORDER",
@@ -161,7 +162,7 @@ function OrdersPage() {
     };
 
     try {
-      const res = await fetch("http://localhost:3001/api/orders", {
+      const res = await fetch(`${API_BASE}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -192,7 +193,7 @@ function OrdersPage() {
 
       try {
         const res = await fetch(
-          `http://localhost:3001/api/orders/${currentOrder.id}/status`,
+          `${API_BASE}/orders/${currentOrder.id}/status`,
           {
             method: "PATCH",
             headers: {
@@ -244,7 +245,7 @@ function OrdersPage() {
     console.log("body", body);
     try {
       const res = await fetch(
-        `http://localhost:3001/api/orders/${currentOrder.id}`,
+        `${API_BASE}/orders/${currentOrder.id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -288,7 +289,7 @@ function OrdersPage() {
       }
 
       try {
-        const response = await fetch("http://localhost:3001/api/print", {
+        const response = await fetch(`${API_BASE}/print`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -356,7 +357,7 @@ function OrdersPage() {
 
   const getAllOrders = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/get-orders", {
+      const response = await fetch(`${API_BASE}/get-orders`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -386,7 +387,7 @@ function OrdersPage() {
 
   const handleCloseShift = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/close-shift", {
+      const res = await fetch(`${API_BASE}/close-shift`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shift: shift }),

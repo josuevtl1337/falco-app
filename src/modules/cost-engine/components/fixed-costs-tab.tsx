@@ -30,8 +30,9 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { IFixedCost, ICostProduct } from "../types";
 import { toast } from "sonner";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = "http://localhost:3001/api/cost-engine";
+const API_BASE_CE = `${API_BASE}/cost-engine`;
 
 function FixedCostsTab() {
   const [fixedCosts, setFixedCosts] = useState<IFixedCost[]>([]);
@@ -54,7 +55,7 @@ function FixedCostsTab() {
 
   const fetchFixedCosts = async () => {
     try {
-      const response = await fetch(`${API_BASE}/fixed-costs`);
+      const response = await fetch(`${API_BASE_CE}/fixed-costs`);
       const data = await response.json();
       setFixedCosts(data);
     } catch (error) {
@@ -64,7 +65,7 @@ function FixedCostsTab() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${API_BASE}/products`);
+      const response = await fetch(`${API_BASE_CE}/products`);
       const data = await response.json();
       setProducts(data);
     } catch (error) {
@@ -76,8 +77,8 @@ function FixedCostsTab() {
     e.preventDefault();
     try {
       const url = editingFixedCost
-        ? `${API_BASE}/fixed-costs/${editingFixedCost.id}`
-        : `${API_BASE}/fixed-costs`;
+        ? `${API_BASE_CE}/fixed-costs/${editingFixedCost.id}`
+        : `${API_BASE_CE}/fixed-costs`;
       const method = editingFixedCost ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -137,7 +138,7 @@ function FixedCostsTab() {
     if (!window.confirm("¿Estás seguro de eliminar este gasto fijo?")) return;
 
     try {
-      const response = await fetch(`${API_BASE}/fixed-costs/${id}`, {
+      const response = await fetch(`${API_BASE_CE}/fixed-costs/${id}`, {
         method: "DELETE",
       });
 

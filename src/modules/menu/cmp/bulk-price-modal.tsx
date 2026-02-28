@@ -21,6 +21,7 @@ import { formatARS } from "@/modules/commons/utils/helpers";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 interface Category {
   category_id: string;
@@ -158,7 +159,7 @@ export default function BulkPriceModal({
       setIsSubmitting(true);
       try {
         const response = await fetch(
-          "http://localhost:3001/api/menu-items/bulk-update",
+          `${API_BASE}/menu-items/bulk-update`,
           {
             method: "POST",
             headers: {

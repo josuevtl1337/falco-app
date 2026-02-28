@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useMemo, useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 
 // export type PaymentMethod = {"cash" | "transfer" | "qr" | "card"};
 
@@ -49,7 +50,7 @@ export function PaymentSection({
 
   const fetchPaymentMethods = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/payment-methods");
+      const response = await fetch(`${API_BASE}/payment-methods`);
       if (!response.ok) {
         throw new Error("Failed to fetch payment methods");
       }

@@ -23,8 +23,9 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { ISupplier } from "../types";
 import { toast } from "sonner";
 import { SearchAndFilter } from "./search-and-filter";
+import { API_BASE } from "@/lib/api";
 
-const API_BASE = "http://localhost:3001/api/cost-engine";
+const API_BASE_CE = `${API_BASE}/cost-engine`;
 
 function SuppliersTab() {
   const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
@@ -41,7 +42,7 @@ function SuppliersTab() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch(`${API_BASE}/suppliers`);
+      const response = await fetch(`${API_BASE_CE}/suppliers`);
       const data = await response.json();
       setSuppliers(data);
     } catch (error) {
@@ -53,8 +54,8 @@ function SuppliersTab() {
     e.preventDefault();
     try {
       const url = editingSupplier
-        ? `${API_BASE}/suppliers/${editingSupplier.id}`
-        : `${API_BASE}/suppliers`;
+        ? `${API_BASE_CE}/suppliers/${editingSupplier.id}`
+        : `${API_BASE_CE}/suppliers`;
       const method = editingSupplier ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -92,7 +93,7 @@ function SuppliersTab() {
     if (!window.confirm("¿Estás seguro de eliminar este proveedor?")) return;
 
     try {
-      const response = await fetch(`${API_BASE}/suppliers/${id}`, {
+      const response = await fetch(`${API_BASE_CE}/suppliers/${id}`, {
         method: "DELETE",
       });
 
