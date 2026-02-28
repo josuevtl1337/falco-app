@@ -17,7 +17,7 @@ RUN npm ci
 
 # Stage 3: Runtime
 FROM node:22-slim
-RUN apt-get update && apt-get install -y libcups2 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libcups2 sqlite3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=frontend-build /app/dist ./dist
 COPY --from=backend-deps /app/backend/node_modules ./backend/node_modules
