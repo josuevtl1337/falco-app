@@ -160,13 +160,11 @@ export const StockModel = {
         menu_item_name: string;
       }>;
 
-      // For each order item, find mapped stock products and deduct
-      const insufficientItems: string[] = [];
-      const deductions: Array<{
-        stockProductId: number;
-        quantity: number;
-        previousStock: number;
-      }> = [];
+      // Aggregate total quantity to deduct per stock product
+      const aggregated = new Map<
+        number,
+        { name: string; current_stock: number; totalQty: number }
+      >();
 
       for (const item of orderItems) {
         const mappings = db
@@ -183,17 +181,26 @@ export const StockModel = {
         }>;
 
         for (const stockProduct of mappings) {
-          if (stockProduct.current_stock < item.quantity) {
-            insufficientItems.push(
-              `${stockProduct.name} (disponible: ${stockProduct.current_stock}, necesario: ${item.quantity})`
-            );
+          const existing = aggregated.get(stockProduct.id);
+          if (existing) {
+            existing.totalQty += item.quantity;
           } else {
-            deductions.push({
-              stockProductId: stockProduct.id,
-              quantity: item.quantity,
-              previousStock: stockProduct.current_stock,
+            aggregated.set(stockProduct.id, {
+              name: stockProduct.name,
+              current_stock: stockProduct.current_stock,
+              totalQty: item.quantity,
             });
           }
+        }
+      }
+
+      // Check all stock is sufficient before any deductions
+      const insufficientItems: string[] = [];
+      for (const [, entry] of aggregated) {
+        if (entry.current_stock < entry.totalQty) {
+          insufficientItems.push(
+            `${entry.name} (disponible: ${entry.current_stock}, necesario: ${entry.totalQty})`
+          );
         }
       }
 
@@ -204,20 +211,20 @@ export const StockModel = {
       }
 
       // All stock is sufficient — perform deductions
-      for (const deduction of deductions) {
-        const newStock = deduction.previousStock - deduction.quantity;
+      for (const [stockProductId, entry] of aggregated) {
+        const newStock = entry.current_stock - entry.totalQty;
 
         db.prepare(
           `UPDATE stock_products SET current_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-        ).run(newStock, deduction.stockProductId);
+        ).run(newStock, stockProductId);
 
         db.prepare(
           `INSERT INTO stock_movements (stock_product_id, quantity_change, previous_stock, new_stock, reason, order_id)
            VALUES (?, ?, ?, ?, ?, ?)`
         ).run(
-          deduction.stockProductId,
-          -deduction.quantity,
-          deduction.previousStock,
+          stockProductId,
+          -entry.totalQty,
+          entry.current_stock,
           newStock,
           `Orden #${orderId} pagada`,
           orderId
