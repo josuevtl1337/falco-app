@@ -5,6 +5,7 @@ import {
   IconDashboard,
   IconFlask,
   IconListDetails,
+  IconPackage,
   IconReport,
 } from "@tabler/icons-react";
 
@@ -76,6 +77,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         name: "Motor de Costos",
         url: RoutePaths.costEngine,
         icon: IconCalculatorFilled,
+      },
+      {
+        name: "Control de Stock",
+        url: RoutePaths.stockControl,
+        icon: IconPackage,
       },
     ],
   };

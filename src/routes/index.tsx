@@ -11,6 +11,7 @@ const MenuPage = lazy(() => import("@/modules/menu/index"));
 const CalibrationPage = lazy(() => import("@/modules/calibration/index"));
 const OrdersPage = lazy(() => import("@/modules/hall/index"));
 const CostEnginePage = lazy(() => import("@/modules/cost-engine/index"));
+const StockPage = lazy(() => import("@/modules/stock/index"));
 
 export const routes: RouteObject[] = [
   {
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: "calibration", element: <CalibrationPage /> },
       { path: "create-order", element: <OrdersPage /> },
       { path: "cost-engine", element: <CostEnginePage /> },
+      { path: "stock-control", element: <StockPage /> },
       { path: "*", element: <div className="p-6">No encontrado</div> },
     ],
   },
