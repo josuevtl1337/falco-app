@@ -325,4 +325,43 @@ db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_menu_map_item ON stock_menu_ite
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(stock_product_id)`).run();
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_stock_movements_order ON stock_movements(order_id)`).run();
 
+// ============================================
+// CASH REGISTER - Opening and Closing Shifts
+// ============================================
+
+// Migration: drop old Spanish-named table if it exists
+try {
+  const cajaOld = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='caja_turnos'").get();
+  if (cajaOld) {
+    db.prepare("DROP TABLE caja_turnos").run();
+    console.log("✓ Dropped legacy caja_turnos table (migrated to cash_register_shifts)");
+  }
+} catch { /* table doesn't exist */ }
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS cash_register_shifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shift TEXT NOT NULL CHECK (shift IN ('morning', 'afternoon')),
+    date TEXT NOT NULL,
+    opened_by TEXT DEFAULT '',
+    closed_by TEXT DEFAULT '',
+    opened_at TEXT NOT NULL,
+    closed_at TEXT,
+    cash_start REAL NOT NULL DEFAULT 0,
+    cash_end REAL,
+    bank_start REAL NOT NULL DEFAULT 0,
+    bank_end REAL,
+    stock_start TEXT NOT NULL DEFAULT '{}',
+    stock_system TEXT,
+    stock_end_actual TEXT,
+    total_sales REAL DEFAULT 0,
+    order_count INTEGER DEFAULT 0,
+    status TEXT NOT NULL CHECK (status IN ('open', 'closed')) DEFAULT 'open',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_cash_register_shifts_date ON cash_register_shifts(date)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_cash_register_shifts_status ON cash_register_shifts(status)`).run();
+
 export default db;

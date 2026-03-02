@@ -42,8 +42,9 @@ backend/                      # Backend API
 ## Conventions
 
 ### Language
-- UI text is in **Spanish** (toasts, labels, headings, placeholders)
-- Code (variables, functions, comments) is in **English**
+- **UI-facing text** is in **Spanish**: toasts, labels, headings, placeholders, button text, dialog titles
+- **Everything else** MUST be in **English**: variable names, function names, type/interface names, file names, folder names, database table names, column names, API route paths, component names, hook names, model names, controller names, router names, comments, CSS class names (custom), constants, enums, props
+- This is a strict rule: if it's internal code naming, it must be English. Only user-visible strings in the UI are Spanish.
 
 ### Frontend Module Pattern
 Every module in `src/modules/<name>/` follows:

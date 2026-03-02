@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface selectedProduct {
   id: string;
   name: string;
   price: number;
   qty: number;
-  // options?: string[];
 }
 interface Props {
   selectedProducts: selectedProduct[];
@@ -18,6 +18,7 @@ interface Props {
   onChangeSeat?: () => void;
   onSave?: () => void;
   activeSeat: string;
+  isRegisterOpen?: boolean;
 }
 
 function SelectedProducts(props: Props) {
@@ -31,6 +32,7 @@ function SelectedProducts(props: Props) {
     onPay,
     onSave,
     activeSeat,
+    isRegisterOpen = true,
   } = props;
 
   const subtotal = selectedProducts.reduce(
@@ -140,7 +142,13 @@ function SelectedProducts(props: Props) {
             </Button>
           ) : (
             <Button
-              onClick={onCommand}
+              onClick={() => {
+                if (!isRegisterOpen) {
+                  toast.error("Debés abrir la caja antes de comandar");
+                  return;
+                }
+                onCommand();
+              }}
               disabled={selectedProducts.length === 0}
               className="cursor-pointer flex-1 py-2 rounded bg-[var(--primary)] text-white font-semibold"
             >

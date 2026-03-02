@@ -8,10 +8,16 @@ import ShiftRouter from "./routers/ShiftRouter.ts";
 import ReportRouter from "./routers/ReportRouter.ts";
 import CostEngineRouter from "./routers/CostEngineRouter.ts";
 import StockRouter from "./routers/StockRouter.ts";
+import CashRegisterRouter from "./routers/CashRegisterRouter.ts";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.set("etag", false);
+app.use((_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 app.use("/api", CalibrationRouter);
 app.use("/api", MenuRouter);
@@ -21,6 +27,7 @@ app.use("/api", ShiftRouter);
 app.use("/api", ReportRouter);
 app.use("/api", CostEngineRouter);
 app.use("/api", StockRouter);
+app.use("/api", CashRegisterRouter);
 
 const PORT = 3001;
 app.listen(PORT, () => {

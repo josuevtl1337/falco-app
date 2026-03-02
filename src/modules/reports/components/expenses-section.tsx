@@ -82,7 +82,7 @@ export default function ExpensesSection({
     };
 
     const handleDeleteExpense = async (id: number) => {
-        if (!confirm("¿Eliminar este gasto?")) return;
+        if (!window.confirm("¿Eliminar este gasto?")) return;
         try {
             await deleteExpense(id);
             toast.success("Gasto eliminado");

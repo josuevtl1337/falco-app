@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import CheckoutView from "./cmp/checkout/checkout-view";
 import { PaymentData } from "./cmp/checkout/payment-section";
 import { ShiftContext } from "@/App";
+import { useCashRegister } from "./hooks/useCashRegister";
+import RegisterOpeningDialog from "./cmp/cash-register/register-opening-dialog";
+import RegisterClosingDialog from "./cmp/cash-register/register-closing-dialog";
 
 export enum OrderState {
   CREATE_ORDER = "CREATE_ORDER",
@@ -45,6 +48,58 @@ function OrdersPage() {
   const [orders, setOrders] = useState<OrderStateData[]>([]);
 
   const [currentOrder, setCurrentOrder] = useState<OrderStateData | null>(null);
+
+  // Cash register state
+  const {
+    isOpen: isRegisterOpen,
+    register,
+    openRegister,
+    closeRegister,
+    fetchBakeryStock,
+  } = useCashRegister();
+  const [showOpeningDialog, setShowOpeningDialog] = useState(false);
+  const [showClosingDialog, setShowClosingDialog] = useState(false);
+
+  const handleRegisterClick = useCallback(() => {
+    if (isRegisterOpen) {
+      if (orders.length > 0) {
+        toast.error("Cerrá todas las comandas abiertas antes de cerrar la caja");
+        return;
+      }
+      setShowClosingDialog(true);
+    } else {
+      setShowOpeningDialog(true);
+    }
+  }, [isRegisterOpen, orders]);
+
+  const handleOpenRegister = useCallback(
+    async (data: Parameters<typeof openRegister>[0]) => {
+      try {
+        await openRegister(data);
+        setShowOpeningDialog(false);
+        toast.success("Caja abierta correctamente");
+      } catch (err: any) {
+        toast.error(err.message || "Error al abrir caja");
+      }
+    },
+    [openRegister]
+  );
+
+  const handleCloseRegister = useCallback(
+    async (data: Parameters<typeof closeRegister>[0]) => {
+      try {
+        await closeRegister(data);
+        setShowClosingDialog(false);
+        toast.success("Caja cerrada correctamente");
+        setOrders([]);
+        setSeat("");
+        setCurrentOrder(null);
+      } catch (err: any) {
+        toast.error(err.message || "Error al cerrar caja");
+      }
+    },
+    [closeRegister]
+  );
 
   const handleStateChange = (newState: OrderState) => {
     setState(newState);
@@ -145,6 +200,10 @@ function OrdersPage() {
   );
 
   const onCommand = useCallback(async () => {
+    if (!isRegisterOpen) {
+      toast.error("Debés abrir la caja antes de comandar");
+      return;
+    }
     if (!currentOrder) return;
     const body = {
       table_number: seat,
@@ -176,7 +235,7 @@ function OrdersPage() {
     } catch (err) {
       console.error("Error creating order:", err);
     }
-  }, [currentOrder, seat, shift]);
+  }, [currentOrder, seat, shift, isRegisterOpen]);
 
   const onPay = useCallback(
     async (paymentData: PaymentData) => {
@@ -384,24 +443,6 @@ function OrdersPage() {
     setState(OrderState.PICK_MENU);
   };
 
-  const handleCloseShift = useCallback(async () => {
-    try {
-      const res = await fetch("http://localhost:3001/api/close-shift", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shift: shift }),
-      });
-      if (!res.ok) throw new Error("Network response was not ok");
-      toast.success("Backup creado / turno cerrado");
-      setOrders([]);
-      setSeat("");
-      setCurrentOrder(null);
-    } catch (err) {
-      console.error("Error closing shift:", err);
-      toast.error("Error closing shift");
-    }
-  }, [shift]);
-
   return (
     <div>
       <div
@@ -413,7 +454,8 @@ function OrdersPage() {
           onChangeShift={setShift}
           orders={orders}
           activeSeat={seat}
-          handleCloseShift={handleCloseShift}
+          onRegisterClick={handleRegisterClick}
+          isRegisterOpen={isRegisterOpen}
         />
 
         {seat && (
@@ -441,11 +483,26 @@ function OrdersPage() {
                 onSave={onEditCommand}
                 onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
                 activeSeat={seat}
+                isRegisterOpen={isRegisterOpen}
               />
             </div>
           </>
         )}
       </div>
+
+      <RegisterOpeningDialog
+        open={showOpeningDialog}
+        onOpenChange={setShowOpeningDialog}
+        shift={shift}
+        onSubmit={handleOpenRegister}
+      />
+      <RegisterClosingDialog
+        open={showClosingDialog}
+        onOpenChange={setShowClosingDialog}
+        register={register}
+        onSubmit={handleCloseRegister}
+        fetchBakeryStock={fetchBakeryStock}
+      />
     </div>
   );
 }

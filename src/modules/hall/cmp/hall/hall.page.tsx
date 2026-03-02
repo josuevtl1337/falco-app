@@ -3,7 +3,7 @@ import { OrderStateData } from "../..";
 import Banquets from "./banquets";
 import TableWithChairs from "./tables";
 import { Button } from "@/components/ui/button";
-import { Power, Sun, SunMoon } from "lucide-react";
+import { LockOpen, Lock, Sun, SunMoon } from "lucide-react";
 import { ShiftContext, ShiftType } from "@/App";
 import TakeAway from "./take-away";
 
@@ -12,7 +12,8 @@ interface IHallPageProps {
   onChangeShift: (shift: ShiftType) => void;
   orders: OrderStateData[];
   activeSeat: string;
-  handleCloseShift: () => void;
+  onRegisterClick: () => void;
+  isRegisterOpen: boolean;
 }
 
 // Hall disposal
@@ -37,14 +38,10 @@ const HallPage: React.FC<IHallPageProps> = ({
   onChangeShift,
   orders,
   activeSeat,
-  handleCloseShift,
+  onRegisterClick,
+  isRegisterOpen,
 }) => {
-  // const [shiftLocal, setShiftLocal] = useState<"morning" | "afternoon">(
-  //   "morning"
-  // );
-
   const { shift } = useContext(ShiftContext);
-  console.log(shift);
 
   const activeBanquetIds = useMemo(
     () => new Set(orders.map((o) => o.table_number)),
@@ -68,8 +65,6 @@ const HallPage: React.FC<IHallPageProps> = ({
       })),
     [activeBanquetIds]
   );
-
-  const isAnyOrderOpen = useMemo(() => orders.length > 0, [orders]);
 
   return (
     <div className="h-full bg-[var(--card-background)] rounded-2xl border border-[var(--card-border)] p-6 flex flex-col">
@@ -119,16 +114,19 @@ const HallPage: React.FC<IHallPageProps> = ({
               <SunMoon />
             </Button>
           </div>
-          {!isAnyOrderOpen && (
-            <Button
-              variant={"outline"}
-              type="button"
-              onClick={handleCloseShift}
-              className="px-3 py-1 rounded-lg text-sm font-semibold"
-            >
-              <Power />
-            </Button>
-          )}
+          <Button
+            variant={"outline"}
+            type="button"
+            onClick={onRegisterClick}
+            className={`px-3 py-1 rounded-lg text-sm font-semibold ${
+              isRegisterOpen
+                ? "border-green-500 text-green-400 bg-green-500/10"
+                : "border-orange-500 text-orange-400 bg-orange-500/10"
+            }`}
+            title={isRegisterOpen ? "Cerrar Caja" : "Abrir Caja"}
+          >
+            {isRegisterOpen ? <LockOpen size={18} /> : <Lock size={18} />}
+          </Button>
         </div>
       </div>
       <div className="flex-1 flex-col justify-between">
