@@ -1,22 +1,23 @@
 import { useCallback, useContext, useEffect, useState } from "react";
-import MenuPage from "../menu";
-import HallPage from "./cmp/hall/hall.page";
-import CreateOrderState from "./cmp/states/create-order";
 import { IMenuItem as IProduct } from "backend/models/MenuModel";
-import SelectedProducts from "./cmp/pick-products/index";
 import { toast } from "sonner";
-import CheckoutView from "./cmp/checkout/checkout-view";
-import { PaymentData } from "./cmp/checkout/payment-section";
 import { ShiftContext } from "@/App";
 import { useCashRegister } from "./hooks/useCashRegister";
+import { useMenuData } from "./hooks/useMenuData";
+import { PaymentData } from "./cmp/checkout/payment-section";
+import CompactHallPanel from "./cmp/compact-hall-panel";
+import PosMenuGrid from "./cmp/pos-menu-grid";
+import OrderCart from "./cmp/order-cart";
+import CheckoutSheetContent from "./cmp/checkout-sheet-content";
 import RegisterOpeningDialog from "./cmp/cash-register/register-opening-dialog";
 import RegisterClosingDialog from "./cmp/cash-register/register-closing-dialog";
-
-export enum OrderState {
-  CREATE_ORDER = "CREATE_ORDER",
-  PICK_MENU = "PICK_MENU",
-  CHECKOUT_VIEW = "CHECKOUT_VIEW",
-}
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 export interface OrderStateData {
   id: string;
@@ -39,15 +40,17 @@ export interface OrderProduct extends IProduct {
 }
 
 function OrdersPage() {
-  const [state, setState] = useState<OrderState>(OrderState.CREATE_ORDER);
-
-  const [seat, setSeat] = useState<string>("");
+  const [seat, setSeat] = useState("");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [pendingClose, setPendingClose] = useState(false);
 
   const { shift, setShift } = useContext(ShiftContext);
 
   const [orders, setOrders] = useState<OrderStateData[]>([]);
-
   const [currentOrder, setCurrentOrder] = useState<OrderStateData | null>(null);
+
+  // Menu data
+  const { products, categories } = useMenuData();
 
   // Cash register state
   const {
@@ -63,7 +66,9 @@ function OrdersPage() {
   const handleRegisterClick = useCallback(() => {
     if (isRegisterOpen) {
       if (orders.length > 0) {
-        toast.error("Cerrá todas las comandas abiertas antes de cerrar la caja");
+        toast.error(
+          "Cerrá todas las comandas abiertas antes de cerrar la caja"
+        );
         return;
       }
       setShowClosingDialog(true);
@@ -100,10 +105,6 @@ function OrdersPage() {
     },
     [closeRegister]
   );
-
-  const handleStateChange = (newState: OrderState) => {
-    setState(newState);
-  };
 
   const computeSubtotal = (items: OrderStateData["items"]) =>
     items.reduce((acc, p) => acc + p.unit_price * p.quantity, 0);
@@ -190,7 +191,7 @@ function OrdersPage() {
     );
   }, []);
 
-  const onChangeSteat = useCallback(
+  const onChangeSeat = useCallback(
     (tableNumber: string) => {
       setSeat(tableNumber);
       const found = orders.find((o) => o.table_number === tableNumber) ?? null;
@@ -229,9 +230,7 @@ function OrdersPage() {
       const data = await res.json();
       toast.info("Se ha generado la comanda");
       setOrders((prev) => [...prev, data.newOrder]);
-      console.log("data.newOrder", data.newOrder);
       setCurrentOrder(data.newOrder);
-      handleStateChange(OrderState.CREATE_ORDER);
     } catch (err) {
       console.error("Error creating order:", err);
     }
@@ -254,19 +253,16 @@ function OrdersPage() {
           `http://localhost:3001/api/orders/${currentOrder.id}/status`,
           {
             method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
           }
         );
-        
+
         if (!res.ok) {
-          // Intentar parsear el error del backend
           const errorData = await res.json().catch(() => ({}));
-          const errorMessage = errorData?.message || "Error al procesar el pago";
-          
-          // Verificar si es error de stock
+          const errorMessage =
+            errorData?.message || "Error al procesar el pago";
+
           if (errorMessage.includes("Stock insuficiente")) {
             toast.error(errorMessage, { duration: 6000 });
           } else {
@@ -274,10 +270,10 @@ function OrdersPage() {
           }
           return;
         }
-        
+
         toast.success("¡Cachiiinnn! ☕💰 ");
-        setSeat("");
-        setCurrentOrder(null);
+        setCheckoutOpen(false);
+        setPendingClose(true);
         await getAllOrders();
       } catch (err) {
         console.error("Error fetching orders:", err);
@@ -300,7 +296,6 @@ function OrdersPage() {
       })),
     };
 
-    console.log("body", body);
     try {
       const res = await fetch(
         `http://localhost:3001/api/orders/${currentOrder.id}`,
@@ -320,11 +315,9 @@ function OrdersPage() {
 
   const onPrint = useCallback(
     async (paymentData?: PaymentData) => {
-      var body = {};
-
       if (!currentOrder) return;
 
-      body = {
+      let body: Record<string, unknown> = {
         ...currentOrder,
         items: currentOrder.items.map((p) => ({
           menu_item_id: p.menu_item_id,
@@ -335,7 +328,6 @@ function OrdersPage() {
         })),
       };
 
-      console.log("paymentData", paymentData);
       if (paymentData) {
         body = {
           ...currentOrder,
@@ -362,64 +354,11 @@ function OrdersPage() {
     [currentOrder]
   );
 
-  const renderCurrentState = () => {
-    switch (state) {
-      case OrderState.CREATE_ORDER:
-        return (
-          <CreateOrderState
-            orders={orders}
-            tableSelected={seat}
-            onCreate={() => handleStateChange(OrderState.PICK_MENU)}
-            viewCommand={viewCommand}
-            onPrint={onPrint}
-            onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
-          />
-        );
-      case OrderState.PICK_MENU:
-        return (
-          <MenuPage
-            onBack={() => handleStateChange(OrderState.CREATE_ORDER)}
-            pickProduct={addProduct}
-            updateProductQty={updateProductQty}
-          />
-        );
-      case OrderState.CHECKOUT_VIEW:
-        if (!currentOrder) return null;
-        return (
-          <CheckoutView
-            orderLabel={`Orden para ${currentOrder.table_number}`}
-            items={
-              currentOrder.items.map((it) => ({
-                id: String(it.menu_item_id),
-                name: it.menu_item_name,
-                qty: it.quantity,
-                price: it.unit_price,
-                subtotal: it.subtotal,
-              })) || []
-            }
-            subtotal={
-              currentOrder.total_amount -
-              (currentOrder.discount_percentage || 0)
-            }
-            discount={0}
-            total={currentOrder.total_amount}
-            onClose={() => handleStateChange(OrderState.CREATE_ORDER)}
-            onConfirm={onPay}
-            onPrint={onPrint}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   const getAllOrders = async () => {
     try {
       const response = await fetch("http://localhost:3001/api/get-orders", {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -435,22 +374,37 @@ function OrdersPage() {
     getAllOrders();
   }, []);
 
+  // Clean up seat/order after checkout Sheet finishes closing
   useEffect(() => {
-    setState(OrderState.CREATE_ORDER);
-  }, [seat]);
+    if (!checkoutOpen && pendingClose) {
+      const timer = setTimeout(() => {
+        setPendingClose(false);
+        setSeat("");
+        setCurrentOrder(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [checkoutOpen, pendingClose]);
 
-  const viewCommand = async () => {
-    setState(OrderState.PICK_MENU);
-  };
+  // Map current order items to cart format
+  const cartItems = currentOrder
+    ? currentOrder.items.map((item) => ({
+        id: item.menu_item_id,
+        qty: item.quantity,
+        name: item.menu_item_name,
+        price: item.unit_price,
+      }))
+    : [];
 
   return (
     <div>
       <div
-        className="h-[95vh] grid gap-4"
-        style={{ gridTemplateColumns: "320px 1fr 360px" }}
+        className="h-[95vh] grid gap-3"
+        style={{ gridTemplateColumns: "240px 1fr 300px" }}
       >
-        <HallPage
-          onChangeSeat={onChangeSteat}
+        {/* Left: Compact Hall Panel */}
+        <CompactHallPanel
+          onChangeSeat={onChangeSeat}
           onChangeShift={setShift}
           orders={orders}
           activeSeat={seat}
@@ -458,38 +412,60 @@ function OrdersPage() {
           isRegisterOpen={isRegisterOpen}
         />
 
-        {seat && (
-          <>
-            <div className="h-full overflow-auto">{renderCurrentState()}</div>
+        {/* Center: Always-visible Menu Grid */}
+        <PosMenuGrid
+          products={products}
+          categories={categories}
+          onSelectProduct={addProduct}
+          disabled={!seat}
+        />
 
-            <div className="h-full overflow-auto">
-              <SelectedProducts
-                selectedProducts={
-                  currentOrder
-                    ? currentOrder.items.map((item) => ({
-                        id: item.menu_item_id,
-                        qty: item.quantity,
-                        name: item.menu_item_name,
-                        price: item.unit_price,
-                        subtotal: item.subtotal,
-                      })) || []
-                    : []
-                }
-                onUpdateProductQty={updateProductQty}
-                onRemoveProduct={removeProduct}
-                onClearProducts={clearProducts}
-                isReadyToPay={currentOrder?.status === "open" || false}
-                onCommand={onCommand}
-                onSave={onEditCommand}
-                onPay={() => handleStateChange(OrderState.CHECKOUT_VIEW)}
-                activeSeat={seat}
-                isRegisterOpen={isRegisterOpen}
-              />
-            </div>
-          </>
-        )}
+        {/* Right: Always-visible Cart */}
+        <OrderCart
+          items={cartItems}
+          activeSeat={seat}
+          onUpdateProductQty={updateProductQty}
+          onRemoveProduct={removeProduct}
+          onClearProducts={clearProducts}
+          onCommand={onCommand}
+          onSave={onEditCommand}
+          onPay={() => setCheckoutOpen(true)}
+          onPrint={() => onPrint()}
+          isReadyToPay={currentOrder?.status === "open" || false}
+          isRegisterOpen={isRegisterOpen}
+        />
       </div>
 
+      {/* Checkout Sheet */}
+      <Sheet
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+      >
+        <SheetContent
+          side="right"
+          className="w-[480px] sm:max-w-[480px] bg-[var(--card-background)] border-l border-[var(--card-border)] text-white p-0"
+        >
+          <SheetHeader className="px-5 pt-5 pb-3 border-b border-[var(--card-border)]">
+            <SheetTitle className="text-white text-lg">
+              Cobro de orden
+            </SheetTitle>
+            <SheetDescription className="text-gray-400">
+              {currentOrder
+                ? `Orden para ${currentOrder.table_number}`
+                : ""}
+            </SheetDescription>
+          </SheetHeader>
+          {currentOrder && (
+            <CheckoutSheetContent
+              currentOrder={currentOrder}
+              onConfirm={onPay}
+              onPrint={onPrint}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Cash register dialogs */}
       <RegisterOpeningDialog
         open={showOpeningDialog}
         onOpenChange={setShowOpeningDialog}
