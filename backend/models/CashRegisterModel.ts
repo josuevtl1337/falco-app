@@ -56,6 +56,9 @@ export const CashRegisterModel = {
       return { register: null, bakeryProducts: BAKERY_PRODUCT_NAMES };
     }
 
+    // Convert ISO opened_at to SQLite-compatible format for comparison with orders.created_at
+    const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+
     // Compute live sales totals for the open register
     const salesResult = db
       .prepare(
@@ -64,7 +67,29 @@ export const CashRegisterModel = {
          FROM orders
          WHERE status = 'paid' AND created_at >= ?`
       )
-      .get(register.opened_at) as { total_sales: number; order_count: number };
+      .get(openedAtSqlite) as { total_sales: number; order_count: number };
+
+    // Compute sales breakdown by payment method for cash/bank estimation
+    // "Efectivo" = cash, everything else = bank/transfer
+    const salesByMethod = db
+      .prepare(
+        `SELECT pm.name as method_name, COALESCE(SUM(o.total_amount), 0) as total
+         FROM orders o
+         LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
+         WHERE o.status = 'paid' AND o.created_at >= ?
+         GROUP BY pm.name`
+      )
+      .all(openedAtSqlite) as Array<{ method_name: string | null; total: number }>;
+
+    let cashSales = 0;
+    let bankSales = 0;
+    for (const row of salesByMethod) {
+      if (row.method_name === "Efectivo") {
+        cashSales += row.total;
+      } else {
+        bankSales += row.total;
+      }
+    }
 
     return {
       register: {
@@ -80,6 +105,9 @@ export const CashRegisterModel = {
         order_count: salesResult.order_count,
       },
       bakeryProducts: BAKERY_PRODUCT_NAMES,
+      // Estimated closing values: start minus sales by method
+      estimatedCash: register.cash_start - cashSales,
+      estimatedBank: register.bank_start - bankSales,
     };
   },
 
@@ -96,7 +124,8 @@ export const CashRegisterModel = {
 
       const now = new Date();
       const date = now.toISOString().split("T")[0];
-      const opened_at = now.toISOString();
+      // Store in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) for consistent comparisons with orders.created_at
+      const opened_at = now.toISOString().replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
 
       const result = db
         .prepare(
@@ -136,6 +165,9 @@ export const CashRegisterModel = {
         throw new Error("No open cash register found with that ID.");
       }
 
+      // Convert ISO opened_at to SQLite-compatible format
+      const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+
       const stockStart = JSON.parse(register.stock_start || "{}") as Record<
         string,
         number
@@ -155,7 +187,7 @@ export const CashRegisterModel = {
              AND sp.name IN (${placeholders})
            GROUP BY sp.name`
         )
-        .all(register.opened_at, ...BAKERY_PRODUCT_NAMES) as Array<{
+        .all(openedAtSqlite, ...BAKERY_PRODUCT_NAMES) as Array<{
         name: string;
         total_sold: number;
       }>;
@@ -177,7 +209,7 @@ export const CashRegisterModel = {
            FROM orders
            WHERE status = 'paid' AND created_at >= ?`
         )
-        .get(register.opened_at) as {
+        .get(openedAtSqlite) as {
         total_sales: number;
         order_count: number;
       };
@@ -247,6 +279,9 @@ export const CashRegisterModel = {
       return stock;
     }
 
+    // Convert ISO opened_at to SQLite-compatible format
+    const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+
     const stockStart = JSON.parse(register.stock_start || "{}") as Record<
       string,
       number
@@ -266,7 +301,7 @@ export const CashRegisterModel = {
            AND sp.name IN (${placeholders})
          GROUP BY sp.name`
       )
-      .all(register.opened_at, ...BAKERY_PRODUCT_NAMES) as Array<{
+      .all(openedAtSqlite, ...BAKERY_PRODUCT_NAMES) as Array<{
       name: string;
       total_sold: number;
     }>;

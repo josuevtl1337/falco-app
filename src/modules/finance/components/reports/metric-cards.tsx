@@ -4,7 +4,7 @@ import {
     IconTrendingDown,
     IconMinus,
 } from "@tabler/icons-react";
-import type { MonthlyReport } from "../types";
+import type { MonthlyReport } from "../../types";
 
 interface MetricCardsProps {
     data: MonthlyReport | null;

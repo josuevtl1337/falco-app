@@ -1,6 +1,6 @@
 export enum RoutePaths {
   root = "/",
-  reports = "/reports",
+  finance = "/finance",
   menu = "/menu",
   calibration = "/calibration",
   createOrder = "/create-order",
@@ -11,7 +11,7 @@ export enum RoutePaths {
 
 export type RouteKey =
   | "home"
-  | "reports"
+  | "finance"
   | "menu"
   | "hall"
   | "calibration"

@@ -9,7 +9,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from "recharts";
-import { useChartData } from "../hooks/use-advanced-reports";
+import { useChartData } from "../../hooks/use-reports";
 
 interface RevenueChartProps {
     months?: number;

@@ -6,7 +6,7 @@ import ResumePage from "@/modules/resume";
 
 const MainLayout = lazy(() => import("@/layouts/main-layout"));
 const HomePage = lazy(() => import("@/modules/home/index"));
-const ReportsPage = lazy(() => import("@/modules/reports/index"));
+const FinancePage = lazy(() => import("@/modules/finance/index"));
 const MenuPage = lazy(() => import("@/modules/menu/index"));
 const CalibrationPage = lazy(() => import("@/modules/calibration/index"));
 const OrdersPage = lazy(() => import("@/modules/hall/index"));
@@ -20,7 +20,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <HomePage /> },
       { path: "resume", element: <ResumePage /> },
-      { path: "reports", element: <ReportsPage /> },
+      { path: "finance", element: <FinancePage /> },
       { path: "menu", element: <MenuPage /> },
       { path: "calibration", element: <CalibrationPage /> },
       { path: "create-order", element: <OrdersPage /> },

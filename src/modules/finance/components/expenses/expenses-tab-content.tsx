@@ -10,9 +10,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { useReportExpenses } from "../hooks/use-advanced-reports";
-import { EXPENSE_CATEGORIES } from "../types";
-import type { MonthlyReport } from "../types";
+import { useReportExpenses } from "../../hooks/use-expenses";
+import { useMonthlyReport } from "../../hooks/use-reports";
+import { EXPENSE_CATEGORIES } from "../../types";
 import AddExpenseModal from "./add-expense-modal";
 import {
     IconCirclePlus,
@@ -21,11 +21,9 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-interface ExpensesSectionProps {
+interface ExpensesTabContentProps {
     month: number;
     year: number;
-    report: MonthlyReport | null;
-    onExpenseChange: () => void;
 }
 
 function getCategoryInfo(category: string) {
@@ -53,17 +51,10 @@ function getCategoryColor(category: string): string {
     }
 }
 
-export default function ExpensesSection({
-    month,
-    year,
-    report,
-    onExpenseChange,
-}: ExpensesSectionProps) {
+export default function ExpensesTabContent({ month, year }: ExpensesTabContentProps) {
     const [showModal, setShowModal] = useState(false);
-    const { expenses, addExpense, deleteExpense } = useReportExpenses(
-        month,
-        year
-    );
+    const { expenses, addExpense, deleteExpense } = useReportExpenses(month, year);
+    const { data: report, refetch: refetchReport } = useMonthlyReport(month, year);
 
     const handleAddExpense = async (payload: {
         amount: number;
@@ -74,7 +65,7 @@ export default function ExpensesSection({
         try {
             await addExpense(payload as any);
             toast.success("Gasto agregado correctamente");
-            onExpenseChange();
+            refetchReport();
             setShowModal(false);
         } catch {
             toast.error("Error al agregar gasto");
@@ -82,11 +73,11 @@ export default function ExpensesSection({
     };
 
     const handleDeleteExpense = async (id: number) => {
-        if (!window.confirm("¿Eliminar este gasto?")) return;
+        if (!confirm("¿Eliminar este gasto?")) return;
         try {
             await deleteExpense(id);
             toast.success("Gasto eliminado");
-            onExpenseChange();
+            refetchReport();
         } catch {
             toast.error("Error al eliminar gasto");
         }
@@ -186,7 +177,6 @@ export default function ExpensesSection({
                                             Monto
                                         </TableHead>
                                         <TableHead className="text-center text-slate-300 w-[60px]">
-
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>

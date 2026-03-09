@@ -56,6 +56,8 @@ function OrdersPage() {
     openRegister,
     closeRegister,
     fetchBakeryStock,
+    estimatedCash,
+    estimatedBank,
   } = useCashRegister();
   const [showOpeningDialog, setShowOpeningDialog] = useState(false);
   const [showClosingDialog, setShowClosingDialog] = useState(false);
@@ -502,6 +504,8 @@ function OrdersPage() {
         register={register}
         onSubmit={handleCloseRegister}
         fetchBakeryStock={fetchBakeryStock}
+        estimatedCash={estimatedCash}
+        estimatedBank={estimatedBank}
       />
     </div>
   );
