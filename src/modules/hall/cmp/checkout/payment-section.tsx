@@ -66,16 +66,15 @@ export function PaymentSection({
   }, []);
 
   useEffect(() => {
-    onChange &&
-      selectedPaymentMethod &&
+    if (onChange && selectedPaymentMethod) {
       onChange({
         paymentMethod: selectedPaymentMethod,
         discount_percentage: discountValue,
         total_amount: totalAfterDiscount,
       });
-  }, [selectedPaymentMethod, discountValue, totalAfterDiscount, onChange]);
-
-  console.log(selectedPaymentMethod, totalAfterDiscount, discountValue);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPaymentMethod, discountValue, totalAfterDiscount]);
   const onSelectPM = (name: string) => {
     setSelectedPaymentMethod(paymentMethods.find((pm) => pm.code === name)!);
     if (name !== "cash") setCashPaid(0);
