@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ interface Props {
   register: CashRegisterShift | null;
   onSubmit: (data: ClosingPayload) => Promise<void>;
   fetchBakeryStock: () => Promise<Record<string, number>>;
+  estimatedCash?: number;
+  estimatedBank?: number;
 }
 
 type Step = "input" | "summary";
@@ -42,6 +44,8 @@ export default function RegisterClosingDialog({
   register,
   onSubmit,
   fetchBakeryStock,
+  estimatedCash = 0,
+  estimatedBank = 0,
 }: Props) {
   const [step, setStep] = useState<Step>("input");
   const [cash, setCash] = useState("");
@@ -56,6 +60,28 @@ export default function RegisterClosingDialog({
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [estimationsLoaded, setEstimationsLoaded] = useState(false);
+
+  // Pre-fill all inputs with system-estimated values when dialog opens
+  useEffect(() => {
+    if (open && !estimationsLoaded) {
+      // Pre-fill cash and bank with estimated values
+      setCash(String(estimatedCash));
+      setBank(String(estimatedBank));
+
+      // Pre-fill bakery stock with system-calculated values
+      fetchBakeryStock().then((currentStock) => {
+        const stockEstimates: Record<string, string> = {};
+        for (const name of BAKERY_PRODUCTS) {
+          stockEstimates[name] = String(currentStock[name] ?? 0);
+        }
+        setStock(stockEstimates);
+        setEstimationsLoaded(true);
+      }).catch(() => {
+        setEstimationsLoaded(true);
+      });
+    }
+  }, [open, estimationsLoaded, fetchBakeryStock, estimatedCash, estimatedBank]);
 
   const handleStockChange = (name: string, value: string) => {
     setStock((prev) => ({ ...prev, [name]: value }));
@@ -145,6 +171,7 @@ export default function RegisterClosingDialog({
       return initial;
     });
     setSummaryData(null);
+    setEstimationsLoaded(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -154,6 +181,7 @@ export default function RegisterClosingDialog({
 
   const shiftLabel = register?.shift === "morning" ? "Mañana" : "Tarde";
 
+  // Simplified WhatsApp report text
   const summaryText = useMemo(() => {
     if (!summaryData || !register) return "";
 
@@ -163,24 +191,18 @@ export default function RegisterClosingDialog({
     const formatDiff = (n: number) => (n >= 0 ? `+$${n.toLocaleString()}` : `-$${Math.abs(n).toLocaleString()}`);
 
     let text = `CIERRE DE CAJA - ${register.date} - Turno ${shiftLabel}\n`;
-    text += `================================\n`;
-    text += `Abierta a las ${new Date(register.opened_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}\n\n`;
+    text += `================================\n\n`;
     text += `EFECTIVO: Inicio $${register.cash_start.toLocaleString()} | Cierre $${summaryData.cashEnd.toLocaleString()} | Dif ${formatDiff(cashDiff)}\n`;
-    text += `BANCO/MP: Inicio $${register.bank_start.toLocaleString()} | Cierre $${summaryData.bankEnd.toLocaleString()} | Dif ${formatDiff(bankDiff)}\n`;
-    text += `--------------------------------\n`;
-    text += `STOCK PANADERIA:\n`;
+    text += `BANCO/MP: Inicio $${register.bank_start.toLocaleString()} | Cierre $${summaryData.bankEnd.toLocaleString()} | Dif ${formatDiff(bankDiff)}\n\n`;
+    text += `PANADERIA:\n`;
 
     for (const name of BAKERY_PRODUCTS) {
       const start = register.stock_start[name] ?? 0;
-      const system = summaryData.stockSystem[name] ?? 0;
       const actual = summaryData.stockEndActual[name] ?? 0;
-      const diff = actual - system;
-      const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
-      text += `  ${name}: Inicio ${start} | Sistema ${system} | Real ${actual} | Dif ${diffStr}\n`;
+      text += `  ${name}: Inicio ${start} → Cierre ${actual}\n`;
     }
 
-    text += `--------------------------------\n`;
-    text += `Total Ventas: $${summaryData.totalSales.toLocaleString()}\n`;
+    text += `\nTotal Ventas: $${summaryData.totalSales.toLocaleString()}\n`;
     text += `Comandas: ${summaryData.orderCount}\n`;
     text += `================================`;
 
@@ -219,7 +241,7 @@ export default function RegisterClosingDialog({
         {step === "input" && (
           <>
             <div className="space-y-5 py-2">
-              {/* Money inputs */}
+              {/* Money inputs with estimation labels */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-gray-300">
@@ -229,11 +251,16 @@ export default function RegisterClosingDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="0"
+                    placeholder={estimatedCash > 0 ? `Estimado: $${estimatedCash.toLocaleString()}` : "0"}
                     value={cash}
                     onChange={(e) => setCash(e.target.value)}
                     className="bg-[#181c1f] border-[var(--card-border)] text-white"
                   />
+                  {estimatedCash > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Estimado: ${estimatedCash.toLocaleString()}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-300">
@@ -243,19 +270,27 @@ export default function RegisterClosingDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="0"
+                    placeholder={estimatedBank > 0 ? `Estimado: $${estimatedBank.toLocaleString()}` : "0"}
                     value={bank}
                     onChange={(e) => setBank(e.target.value)}
                     className="bg-[#181c1f] border-[var(--card-border)] text-white"
                   />
+                  {estimatedBank > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Estimado: ${estimatedBank.toLocaleString()}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Bakery stock */}
+              {/* Bakery stock with estimations pre-filled */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-3">
-                  Stock Real Final (conteo manual)
+                <h4 className="text-sm font-semibold text-gray-300 mb-1">
+                  Stock Final de Panadería
                 </h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Pre-cargado con la estimación del sistema. Editá si el conteo real difiere.
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   {BAKERY_PRODUCTS.map((name) => (
                     <div key={name} className="space-y-1">

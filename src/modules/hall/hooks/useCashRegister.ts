@@ -10,6 +10,8 @@ interface CashRegisterState {
   register: CashRegisterShift | null;
   bakeryProducts: string[];
   loading: boolean;
+  estimatedCash: number;
+  estimatedBank: number;
 }
 
 export function useCashRegister() {
@@ -18,6 +20,8 @@ export function useCashRegister() {
     register: null,
     bakeryProducts: [],
     loading: true,
+    estimatedCash: 0,
+    estimatedBank: 0,
   });
 
   const fetchStatus = useCallback(async () => {
@@ -30,6 +34,8 @@ export function useCashRegister() {
         register: data.register,
         bakeryProducts: data.bakeryProducts,
         loading: false,
+        estimatedCash: data.estimatedCash ?? 0,
+        estimatedBank: data.estimatedBank ?? 0,
       });
     } catch (err) {
       console.error("Error fetching cash register status:", err);

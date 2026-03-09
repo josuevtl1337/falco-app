@@ -6,7 +6,7 @@ import {
   IconFlask,
   IconListDetails,
   IconPackage,
-  IconReport,
+  IconReportMoney,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -70,9 +70,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: IconFlask,
       },
       {
-        name: "Reportes",
-        url: RoutePaths.reports,
-        icon: IconReport,
+        name: "Finanzas",
+        url: RoutePaths.finance,
+        icon: IconReportMoney,
       },
       {
         name: "Motor de Costos",

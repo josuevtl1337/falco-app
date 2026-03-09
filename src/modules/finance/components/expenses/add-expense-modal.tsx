@@ -16,8 +16,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { EXPENSE_CATEGORIES } from "../types";
-import type { ExpenseCategory } from "../types";
+import { EXPENSE_CATEGORIES } from "../../types";
+import type { ExpenseCategory } from "../../types";
 
 interface AddExpenseModalProps {
     open: boolean;
@@ -59,7 +59,6 @@ export default function AddExpenseModal({
                 description: description.trim() || undefined,
                 date,
             });
-            // Reset form
             setAmount("");
             setCategory("servicios");
             setDescription("");
@@ -82,7 +81,6 @@ export default function AddExpenseModal({
                 </DialogHeader>
 
                 <div className="space-y-5 py-4">
-                    {/* Amount */}
                     <div className="space-y-2">
                         <Label className="text-sm text-slate-300">Monto (ARS) *</Label>
                         <div className="relative">
@@ -101,7 +99,6 @@ export default function AddExpenseModal({
                         </div>
                     </div>
 
-                    {/* Category */}
                     <div className="space-y-2">
                         <Label className="text-sm text-slate-300">Categoría *</Label>
                         <Select
@@ -128,7 +125,6 @@ export default function AddExpenseModal({
                         </Select>
                     </div>
 
-                    {/* Date */}
                     <div className="space-y-2">
                         <Label className="text-sm text-slate-300">Fecha *</Label>
                         <Input
@@ -139,7 +135,6 @@ export default function AddExpenseModal({
                         />
                     </div>
 
-                    {/* Description */}
                     <div className="space-y-2">
                         <Label className="text-sm text-slate-300">
                             Descripción{" "}

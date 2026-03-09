@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useProductRanking } from "../hooks/use-advanced-reports";
+import { useProductRanking } from "../../hooks/use-reports";
 import {
     IconTrophy,
     IconArrowUp,
@@ -26,7 +26,6 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
 
     const { data, loading } = useProductRanking(month, year, order);
 
-    // Totals
     const totalQuantity = data.reduce((acc, p) => acc + p.quantity_sold, 0);
     const totalRevenue = data.reduce((acc, p) => acc + p.revenue, 0);
 
@@ -68,7 +67,6 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
                     </div>
                 </div>
 
-                {/* Summary */}
                 {!loading && data.length > 0 && (
                     <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
                         <span>
@@ -110,7 +108,6 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
                                     key={product.menu_item_id}
                                     className="relative flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-800/50 hover:border-slate-700/50 transition-all group"
                                 >
-                                    {/* Progress bar background */}
                                     <div
                                         className="absolute inset-0 rounded-lg opacity-[0.07] transition-all"
                                         style={{
@@ -122,7 +119,6 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
                                         }}
                                     />
 
-                                    {/* Position */}
                                     <span className="relative text-sm font-bold min-w-[2.5rem] text-center">
                                         {medal ? (
                                             <span className="text-lg">{medal}</span>
@@ -133,14 +129,12 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
                                         )}
                                     </span>
 
-                                    {/* Name */}
                                     <div className="relative flex-1 min-w-0">
                                         <p className="text-sm font-medium text-slate-200 truncate">
                                             {product.name}
                                         </p>
                                     </div>
 
-                                    {/* Quantity */}
                                     <Badge
                                         variant="outline"
                                         className="relative border-slate-700 text-slate-300 bg-slate-800/50"
@@ -148,7 +142,6 @@ export default function ProductRanking({ month, year }: ProductRankingProps) {
                                         {product.quantity_sold} uds
                                     </Badge>
 
-                                    {/* Revenue */}
                                     <span className="relative text-sm font-semibold text-slate-200 min-w-[80px] text-right">
                                         ${product.revenue?.toLocaleString() ?? 0}
                                     </span>

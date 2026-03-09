@@ -364,4 +364,61 @@ db.prepare(`
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_cash_register_shifts_date ON cash_register_shifts(date)`).run();
 db.prepare(`CREATE INDEX IF NOT EXISTS idx_cash_register_shifts_status ON cash_register_shifts(status)`).run();
 
+// ============================================
+// MÓDULO SERVICIOS - Fixed monthly services
+// ============================================
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS services (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    monthly_amount REAL NOT NULL DEFAULT 0,
+    due_day INTEGER NOT NULL DEFAULT 1 CHECK (due_day BETWEEN 1 AND 31),
+    category TEXT NOT NULL DEFAULT 'general',
+    icon TEXT NOT NULL DEFAULT 'bolt',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS service_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    month INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    year INTEGER NOT NULL,
+    amount_paid REAL NOT NULL,
+    payment_date TEXT NOT NULL,
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(service_id, month, year)
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_service_payments_service ON service_payments(service_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_service_payments_period ON service_payments(month, year)`).run();
+
+// Migration: add service_payment_id column to report_expenses for linking service payments to expenses
+try {
+  const cols = db.prepare("PRAGMA table_info(report_expenses)").all() as Array<{ name: string }>;
+  if (!cols.some(col => col.name === "service_payment_id")) {
+    db.prepare("ALTER TABLE report_expenses ADD COLUMN service_payment_id INTEGER REFERENCES service_payments(id)").run();
+    console.log("✓ Added 'service_payment_id' column to report_expenses table");
+  }
+} catch (error) {
+  console.log("Migration note (service_payment_id):", error);
+}
+
+// Seed default services
+db.prepare(`
+  INSERT OR IGNORE INTO services (name, monthly_amount, due_day, category, icon) VALUES
+    ('Internet', 0, 10, 'connectivity', 'wifi'),
+    ('Alquiler', 0, 5, 'rent', 'home'),
+    ('API', 0, 1, 'software', 'code'),
+    ('DREI', 0, 15, 'tax', 'receipt'),
+    ('Contadora', 0, 1, 'professional', 'user'),
+    ('Luz', 0, 15, 'utility', 'bolt')
+`).run();
+
 export default db;
