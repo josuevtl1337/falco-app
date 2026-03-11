@@ -7,11 +7,27 @@ class ReportController {
   // =========================================
   public async getDailyReport(req: Request, res: Response): Promise<void> {
     try {
-      const report = await ReportModel.getDailyReport(
-        req.query.date as string,
-        req.query.shift as string
-      );
-      res.status(200).json({ ...report });
+      const date = (req.query.date as string) || "";
+      const from = (req.query.from as string) || "";
+      const to = (req.query.to as string) || "";
+      const shift = (req.query.shift as string) || "both";
+
+      let report: { count: number; total: number; avg: number };
+      let topProduct: { name: string; qty: number } | null;
+      let paymentBreakdown: Array<{ method: string; count: number; total: number }>;
+
+      if (from && to) {
+        report = ReportModel.getDailyReportForRange(from, to, shift);
+        topProduct = ReportModel.getTopProductForRange(from, to, shift);
+        paymentBreakdown = ReportModel.getPaymentBreakdownForRange(from, to, shift);
+      } else {
+        const d = date || new Date().toISOString().slice(0, 10);
+        report = await ReportModel.getDailyReport(d, shift);
+        topProduct = ReportModel.getTopProduct(d, shift);
+        paymentBreakdown = ReportModel.getPaymentBreakdown(d, shift);
+      }
+
+      res.status(200).json({ ...report, topProduct, paymentBreakdown });
     } catch (error: any) {
       console.error("ReportController.getDailyReport error:", error);
       res.status(500).json({

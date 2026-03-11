@@ -1,4 +1,4 @@
-import db from "../db.ts";
+import db, { getLocalTimestamp } from "../db.ts";
 
 export interface Order {
   id?: number;
@@ -29,9 +29,9 @@ export const OrderModel = {
         .prepare(
           `
         INSERT INTO orders (
-          table_number, shift, status, discount_percentage, 
-          total_amount, payment_method_id, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          table_number, shift, status, discount_percentage,
+          total_amount, payment_method_id, notes, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `
         )
         .run(
@@ -41,7 +41,8 @@ export const OrderModel = {
           orderData.discount_percentage || 0,
           orderData.total_amount,
           orderData.payment_method_id,
-          orderData.notes
+          orderData.notes,
+          getLocalTimestamp()
         );
 
       const orderId = result.lastInsertRowid;
@@ -144,7 +145,7 @@ export const OrderModel = {
     return parsedOrders;
   },
 
-  getHistory: (filters: { date?: string } = {}) => {
+  getHistory: (filters: { date?: string; from?: string; to?: string; shift?: string } = {}) => {
     let query = `
        SELECT
          o.*,
@@ -168,9 +169,16 @@ export const OrderModel = {
     const params: any[] = [];
 
     if (filters.date) {
-      // SQLite date function to match YYYY-MM-DD
       query += " AND date(o.created_at) = ?";
       params.push(filters.date);
+    } else if (filters.from && filters.to) {
+      query += " AND date(o.created_at) BETWEEN ? AND ?";
+      params.push(filters.from, filters.to);
+    }
+
+    if (filters.shift && filters.shift !== "both") {
+      query += " AND o.shift = ?";
+      params.push(filters.shift);
     }
 
     query += `

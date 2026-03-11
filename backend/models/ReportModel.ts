@@ -46,6 +46,153 @@ class ReportModel {
     };
   }
 
+  /**
+   * Daily report for a date range: count, total, avg
+   */
+  public static getDailyReportForRange(
+    from: string,
+    to: string,
+    shift?: string
+  ): { count: number; total: number; avg: number } {
+    const shiftClause = shift && shift !== "both" ? " AND shift = ?" : "";
+    const params: any[] = [from, to];
+    if (shift && shift !== "both") params.push(shift);
+
+    const data = db
+      .prepare(
+        `SELECT
+            COUNT(*) as count,
+            COALESCE(SUM(total_amount), 0) as total,
+            COALESCE(AVG(total_amount), 0) as avg
+        FROM orders
+        WHERE DATE(created_at) BETWEEN ? AND ? AND status = 'paid'${shiftClause}`
+      )
+      .get(...params);
+    return {
+      count: data.count || 0,
+      total: data.total || 0,
+      avg: data.avg || 0,
+    };
+  }
+
+  /**
+   * Top selling product for a specific date
+   */
+  public static getTopProduct(
+    date: string,
+    shift?: string
+  ): { name: string; qty: number } | null {
+    const shiftClause = shift && shift !== "both" ? " AND o.shift = ?" : "";
+    const params: any[] = [date];
+    if (shift && shift !== "both") params.push(shift);
+
+    const row = db
+      .prepare(
+        `SELECT
+            COALESCE(mi.name, 'Producto eliminado') as name,
+            COALESCE(SUM(oi.quantity), 0) as qty
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+        WHERE DATE(o.created_at) = ? AND o.status = 'paid'${shiftClause}
+        GROUP BY oi.menu_item_id
+        ORDER BY qty DESC
+        LIMIT 1`
+      )
+      .get(...params) as { name: string; qty: number } | undefined;
+
+    return row && row.qty > 0 ? { name: row.name, qty: row.qty } : null;
+  }
+
+  /**
+   * Top selling product for a date range
+   */
+  public static getTopProductForRange(
+    from: string,
+    to: string,
+    shift?: string
+  ): { name: string; qty: number } | null {
+    const shiftClause = shift && shift !== "both" ? " AND o.shift = ?" : "";
+    const params: any[] = [from, to];
+    if (shift && shift !== "both") params.push(shift);
+
+    const row = db
+      .prepare(
+        `SELECT
+            COALESCE(mi.name, 'Producto eliminado') as name,
+            COALESCE(SUM(oi.quantity), 0) as qty
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+        WHERE DATE(o.created_at) BETWEEN ? AND ? AND o.status = 'paid'${shiftClause}
+        GROUP BY oi.menu_item_id
+        ORDER BY qty DESC
+        LIMIT 1`
+      )
+      .get(...params) as { name: string; qty: number } | undefined;
+
+    return row && row.qty > 0 ? { name: row.name, qty: row.qty } : null;
+  }
+
+  /**
+   * Payment method breakdown for a specific date
+   */
+  public static getPaymentBreakdown(
+    date: string,
+    shift?: string
+  ): Array<{ method: string; count: number; total: number }> {
+    const shiftClause = shift && shift !== "both" ? " AND o.shift = ?" : "";
+    const params: any[] = [date];
+    if (shift && shift !== "both") params.push(shift);
+
+    return db
+      .prepare(
+        `SELECT
+            CASE
+              WHEN pm.name = 'Efectivo' THEN 'cash'
+              WHEN pm.name = 'Transferencia' THEN 'transfer'
+              ELSE 'other'
+            END as method,
+            COUNT(*) as count,
+            COALESCE(SUM(o.total_amount), 0) as total
+        FROM orders o
+        LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
+        WHERE DATE(o.created_at) = ? AND o.status = 'paid'${shiftClause}
+        GROUP BY method`
+      )
+      .all(...params) as Array<{ method: string; count: number; total: number }>;
+  }
+
+  /**
+   * Payment method breakdown for a date range
+   */
+  public static getPaymentBreakdownForRange(
+    from: string,
+    to: string,
+    shift?: string
+  ): Array<{ method: string; count: number; total: number }> {
+    const shiftClause = shift && shift !== "both" ? " AND o.shift = ?" : "";
+    const params: any[] = [from, to];
+    if (shift && shift !== "both") params.push(shift);
+
+    return db
+      .prepare(
+        `SELECT
+            CASE
+              WHEN pm.name = 'Efectivo' THEN 'cash'
+              WHEN pm.name = 'Transferencia' THEN 'transfer'
+              ELSE 'other'
+            END as method,
+            COUNT(*) as count,
+            COALESCE(SUM(o.total_amount), 0) as total
+        FROM orders o
+        LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
+        WHERE DATE(o.created_at) BETWEEN ? AND ? AND o.status = 'paid'${shiftClause}
+        GROUP BY method`
+      )
+      .all(...params) as Array<{ method: string; count: number; total: number }>;
+  }
+
   public static getTotalForDate(date: string): number {
     const row = db
       .prepare(
