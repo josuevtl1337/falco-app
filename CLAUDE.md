@@ -76,7 +76,7 @@ For each feature:
 - shadcn components from `@/components/ui/`
 
 ## Commands
-- `npm run dev` — Start Vite frontend (port 5173)
-- `cd backend && npm run dev` — Start Express backend (port 3001)
-- `npm run develop` — Run frontend + backend + Tauri together
+- `npm run develop` — **Main command**: runs frontend + backend + Tauri together (uses `concurrently`)
+- `npm run dev` — Start Vite frontend only (port 1420)
+- `cd backend && npm run dev` — Start Express backend only (port 3001)
 - `npm run build` — Production build

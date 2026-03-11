@@ -421,4 +421,14 @@ db.prepare(`
     ('Luz', 0, 15, 'utility', 'bolt')
 `).run();
 
+/**
+ * Returns the current timestamp in Buenos Aires timezone (America/Argentina/Buenos_Aires).
+ * Format: "YYYY-MM-DD HH:MM:SS" which SQLite DATE() can parse correctly.
+ */
+export function getLocalTimestamp(): string {
+  return new Date().toLocaleString("sv-SE", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+}
+
 export default db;

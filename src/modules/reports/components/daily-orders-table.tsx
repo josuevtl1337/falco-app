@@ -8,14 +8,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
-// import { format } from "date-fns";
 
 interface OrderItem {
   menu_item_name: string;
   quantity: number;
 }
 
-interface Order {
+export interface Order {
   id: number;
   table_number: string;
   status: string;
@@ -26,45 +25,67 @@ interface Order {
 }
 
 interface DailyOrdersTableProps {
-    date?: string; // YYYY-MM-DD
+  date?: string;
+  from?: string;
+  to?: string;
+  shift?: "morning" | "afternoon" | "both";
+  onOrdersLoaded?: (orders: Order[]) => void;
 }
 
-export default function DailyOrdersTable({ date }: DailyOrdersTableProps) {
+export default function DailyOrdersTable({
+  date,
+  from,
+  to,
+  shift,
+  onOrdersLoaded,
+}: DailyOrdersTableProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    // If no date provided, default to today in backend or handle here.
-    // Let's assume we want "today" relative to client if no date.
-    // For simplicity, just call with empty date to get all if unspecified, or current date.
-    // The previous implementation of DailyMetrics used "today" string filter. 
-    // We can just fetch all history for now or pass today's date YYYY-MM-DD.
-    
-    // Construct query
-    let url = "http://localhost:3001/api/get-history";
+
+    const params = new URLSearchParams();
     if (date) {
-        url += `?date=${date}`;
+      params.set("date", date);
+    } else if (from && to) {
+      params.set("from", from);
+      params.set("to", to);
     }
+    if (shift && shift !== "both") {
+      params.set("shift", shift);
+    }
+
+    const qs = params.toString();
+    const url = `http://localhost:3001/api/get-history${qs ? `?${qs}` : ""}`;
 
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
         setOrders(data);
+        onOrdersLoaded?.(data);
         setLoading(false);
       })
       .catch((err) => {
         console.error("Error loading history:", err);
         setLoading(false);
       });
-  }, [date]);
+  }, [date, from, to, shift, onOrdersLoaded]);
 
   if (loading) {
-    return <div className="text-center p-4 text-slate-400">Cargando historial...</div>;
+    return (
+      <div className="text-center p-4 text-slate-400">
+        Cargando historial...
+      </div>
+    );
   }
 
   if (orders.length === 0) {
-    return <div className="text-center p-4 text-slate-400">No hay órdenes para este período.</div>;
+    return (
+      <div className="text-center p-4 text-slate-400">
+        No hay órdenes para este período.
+      </div>
+    );
   }
 
   return (
@@ -82,24 +103,38 @@ export default function DailyOrdersTable({ date }: DailyOrdersTableProps) {
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id} className="border-slate-800 hover:bg-slate-900/30">
+            <TableRow
+              key={order.id}
+              className="border-slate-800 hover:bg-slate-900/30"
+            >
               <TableCell className="font-medium text-slate-300">
-                {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {order.created_at?.slice(11, 16) || "-"}
               </TableCell>
-              <TableCell className="text-slate-400">{order.table_number || "-"}</TableCell>
-              <TableCell className="text-slate-400 max-w-[200px] truncate" title={order.items.map(i => `${i.quantity} ${i.menu_item_name}`).join(", ")}>
-                {order.items.map(i => `${i.quantity} ${i.menu_item_name}`).join(", ")}
+              <TableCell className="text-slate-400">
+                {order.table_number || "-"}
               </TableCell>
-              <TableCell className="text-slate-400">{order.payment_method_name || "-"}</TableCell>
+              <TableCell
+                className="text-slate-400 max-w-[200px] truncate"
+                title={order.items
+                  .map((i) => `${i.quantity} ${i.menu_item_name}`)
+                  .join(", ")}
+              >
+                {order.items
+                  .map((i) => `${i.quantity} ${i.menu_item_name}`)
+                  .join(", ")}
+              </TableCell>
+              <TableCell className="text-slate-400">
+                {order.payment_method_name || "-"}
+              </TableCell>
               <TableCell className="text-right font-medium text-slate-200">
                 ${order.total_amount?.toLocaleString()}
               </TableCell>
               <TableCell className="text-center">
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={
-                    order.status === "paid" 
-                      ? "border-green-500/50 text-green-400 bg-green-500/10" 
+                    order.status === "paid"
+                      ? "border-green-500/50 text-green-400 bg-green-500/10"
                       : "border-yellow-500/50 text-yellow-400 bg-yellow-500/10"
                   }
                 >

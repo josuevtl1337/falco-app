@@ -1,19 +1,49 @@
 import { useEffect, useState } from "react";
 
+interface PaymentBreakdownItem {
+  method: "cash" | "transfer" | "other";
+  count: number;
+  total: number;
+}
+
 interface ReportsData {
   date?: string;
   count: number;
   total: number;
   avg: number;
   topProduct?: { name: string; qty: number } | null;
+  paymentBreakdown?: PaymentBreakdownItem[];
 }
 
-// interface IFilterProps {
-//   timeFilter: string;
-//   shift?: "morning" | "afternoon" | "both";
-//   dateFrom?: string;
-//   dateTo?: string;
-// }
+function getLocalDateString(daysOffset = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  const tzoffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzoffset).toISOString().slice(0, 10);
+}
+
+function getWeekRange(): { from: string; to: string } {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon...
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  const tzoffset = now.getTimezoneOffset() * 60000;
+  const from = new Date(monday.getTime() - tzoffset).toISOString().slice(0, 10);
+  const to = getLocalDateString(0);
+  return { from, to };
+}
+
+function getMonthRange(): { from: string; to: string } {
+  const now = new Date();
+  const tzoffset = now.getTimezoneOffset() * 60000;
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  const from = new Date(firstDay.getTime() - tzoffset).toISOString().slice(0, 10);
+  const to = getLocalDateString(0);
+  return { from, to };
+}
+
+export type { ReportsData, PaymentBreakdownItem };
 
 const useReports = (
   timeFilter: string,
@@ -23,31 +53,42 @@ const useReports = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Compute date inside effect to avoid recreating objects each render
-  // const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-
   useEffect(() => {
     const fetchDaily = async () => {
-      const dateObj = new Date();
-      switch (timeFilter) {
-        case "yesterday":
-          dateObj.setDate(dateObj.getDate() - 1);
-          break;
-        case "today":
-        default:
-          break;
-      }
-      const dateStr = dateObj.toISOString().split("T")[0];
       setLoading(true);
       setError(null);
+
+      let url: string;
+      const shiftParam = shift || "both";
+
+      switch (timeFilter) {
+        case "yesterday": {
+          const dateStr = getLocalDateString(-1);
+          url = `http://localhost:3001/api/report/report-daily?date=${dateStr}&shift=${shiftParam}`;
+          break;
+        }
+        case "week": {
+          const { from, to } = getWeekRange();
+          url = `http://localhost:3001/api/report/report-daily?from=${from}&to=${to}&shift=${shiftParam}`;
+          break;
+        }
+        case "month": {
+          const { from, to } = getMonthRange();
+          url = `http://localhost:3001/api/report/report-daily?from=${from}&to=${to}&shift=${shiftParam}`;
+          break;
+        }
+        case "today":
+        default: {
+          const dateStr = getLocalDateString(0);
+          url = `http://localhost:3001/api/report/report-daily?date=${dateStr}&shift=${shiftParam}`;
+          break;
+        }
+      }
+
       try {
-        const res = await fetch(
-          `http://localhost:3001/api/report/report-daily?date=${dateStr}&shift=${shift || "both"
-          }`
-        );
+        const res = await fetch(url);
         const contentType = res.headers.get("content-type") || "";
         if (!res.ok) {
-          // Try to extract text for debugging
           const text = await res.text();
           throw new Error(`HTTP ${res.status}: ${text}`);
         }
@@ -64,6 +105,7 @@ const useReports = (
           total: Number(json.total || 0),
           avg: Number(json.avg || 0),
           topProduct: json.topProduct || null,
+          paymentBreakdown: json.paymentBreakdown || [],
         };
         setData(parsed);
       } catch (err: any) {
@@ -81,3 +123,4 @@ const useReports = (
 };
 
 export default useReports;
+export { getLocalDateString, getWeekRange, getMonthRange };

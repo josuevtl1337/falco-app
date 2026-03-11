@@ -41,11 +41,12 @@ class OrderController {
 
   public async getOrderHistory(req: Request, res: Response) {
     try {
-      const date = req.query.date as string | undefined;
-      // If no date is provided, maybe default to today? Or all history?
-      // For now, if no date, return all history (be careful with size).
-      // Let's interpret no date as "all", or client must ensure they send it.
-      const orders = OrderModel.getHistory({ date });
+      const filters: { date?: string; from?: string; to?: string; shift?: string } = {};
+      if (req.query.date) filters.date = req.query.date as string;
+      if (req.query.from) filters.from = req.query.from as string;
+      if (req.query.to) filters.to = req.query.to as string;
+      if (req.query.shift) filters.shift = req.query.shift as string;
+      const orders = OrderModel.getHistory(filters);
       res.json(orders);
     } catch (error: any) {
       return res.status(500).json({
