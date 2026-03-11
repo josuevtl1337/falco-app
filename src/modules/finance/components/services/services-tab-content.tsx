@@ -86,7 +86,7 @@ export default function ServicesTabContent({
     };
 
     const handleDeleteService = async (service: ServiceWithStatus) => {
-        if (!confirm(`¿Eliminar el servicio "${service.name}"?`)) return;
+        if (!window.confirm(`¿Eliminar el servicio "${service.name}"?`)) return;
         try {
             await deleteService(service.id);
             toast.success("Servicio eliminado");
@@ -114,7 +114,7 @@ export default function ServicesTabContent({
     };
 
     const handleDeletePayment = async (paymentId: number) => {
-        if (!confirm("¿Anular este pago?")) return;
+        if (!window.confirm("¿Anular este pago?")) return;
         try {
             await deletePayment(paymentId);
             toast.success("Pago anulado");
