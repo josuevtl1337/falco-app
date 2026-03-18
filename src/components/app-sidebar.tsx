@@ -4,6 +4,7 @@ import {
   IconChartBar,
   IconDashboard,
   IconFlask,
+  IconHome,
   IconListDetails,
   IconPackage,
   IconReportMoney,
@@ -24,12 +25,18 @@ import {
 import { RoutePaths } from "@/routes/paths";
 import { useTheme } from "@/modules/commons/theme/theme-provider";
 import StockAlertBadge from "@/modules/stock/components/stock-alert-badge";
+import { NavLink } from "react-router-dom";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setTheme, theme } = useTheme();
 
   const data = {
     navMain: [
+      {
+        title: "Inicio",
+        url: RoutePaths.root,
+        icon: IconHome,
+      },
       {
         title: "Resumen",
         url: RoutePaths.resume,
@@ -86,10 +93,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5 text-[var(--primary)]"
-            ></SidebarMenuButton>
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+              <NavLink to={RoutePaths.root} className="flex items-center gap-2">
+                <span className="logo-font text-xl text-[var(--primary)]">
+                  Falco
+                </span>
+              </NavLink>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

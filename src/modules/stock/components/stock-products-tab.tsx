@@ -47,10 +47,11 @@ function StockProductsTab() {
   const [selectedMenuItemIds, setSelectedMenuItemIds] = useState<number[]>([]);
   const [loadingMappings, setLoadingMappings] = useState(false);
 
-  // Replenish dialog
-  const [replenishProduct, setReplenishProduct] = useState<StockProduct | null>(null);
-  const [replenishQty, setReplenishQty] = useState("");
-  const [isReplenishOpen, setIsReplenishOpen] = useState(false);
+  // Adjust stock dialog (replaces both replenish and adjust)
+  const [adjustProduct, setAdjustProduct] = useState<StockProduct | null>(null);
+  const [adjustQty, setAdjustQty] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
 
   // Movements dialog
   const [movementsProductId, setMovementsProductId] = useState<number | null>(null);
@@ -173,33 +174,42 @@ function StockProductsTab() {
     }
   }
 
-  async function handleReplenish(e: React.FormEvent) {
+  async function handleAdjustStock(e: React.FormEvent) {
     e.preventDefault();
-    if (!replenishProduct) return;
+    if (!adjustProduct) return;
 
-    const qty = parseInt(replenishQty);
-    if (!qty || qty <= 0) {
-      toast.error("La cantidad debe ser mayor a 0");
+    const qty = parseInt(adjustQty);
+    if (isNaN(qty) || qty < 0) {
+      toast.error("La cantidad debe ser 0 o mayor");
       return;
     }
 
     try {
-      const res = await fetch(`${STOCK_API}/products/${replenishProduct.id}/replenish`, {
-        method: "POST",
+      const res = await fetch(`${STOCK_API}/products/${adjustProduct.id}/adjust`, {
+        method: "PATCH",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ quantity: qty }),
+        body: JSON.stringify({
+          new_quantity: qty,
+          reason: adjustReason || "Corrección manual",
+        }),
       });
       if (!res.ok) {
-        toast.error("Error al reponer stock");
+        const errData = await res.json();
+        toast.error(errData.error || "Error al ajustar stock");
         return;
       }
-      toast.success(`Stock repuesto: +${qty} unidades de ${replenishProduct.name}`);
-      setIsReplenishOpen(false);
-      setReplenishQty("");
-      setReplenishProduct(null);
+      const diff = qty - adjustProduct.current_stock;
+      const sign = diff >= 0 ? "+" : "";
+      toast.success(
+        `Stock ajustado: ${adjustProduct.name} → ${qty} (${sign}${diff})`
+      );
+      setIsAdjustOpen(false);
+      setAdjustQty("");
+      setAdjustReason("");
+      setAdjustProduct(null);
       refetch();
     } catch {
-      toast.error("Error al reponer stock");
+      toast.error("Error al ajustar stock");
     }
   }
 
@@ -391,7 +401,7 @@ function StockProductsTab() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Editar"
+                        title="Editar producto"
                         onClick={() => openEditDialog(product)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -399,11 +409,12 @@ function StockProductsTab() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Reponer stock"
+                        title="Ajustar stock"
                         onClick={() => {
-                          setReplenishProduct(product);
-                          setReplenishQty("");
-                          setIsReplenishOpen(true);
+                          setAdjustProduct(product);
+                          setAdjustQty(product.current_stock.toString());
+                          setAdjustReason("");
+                          setIsAdjustOpen(true);
                         }}
                       >
                         <PackagePlus className="h-4 w-4" />
@@ -438,35 +449,56 @@ function StockProductsTab() {
         </TableBody>
       </Table>
 
-      <Dialog open={isReplenishOpen} onOpenChange={setIsReplenishOpen}>
+      {/* Adjust stock dialog */}
+      <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reponer Stock</DialogTitle>
+            <DialogTitle>Ajustar Stock</DialogTitle>
             <DialogDescription>
-              {replenishProduct
-                ? `${replenishProduct.name} — Stock actual: ${replenishProduct.current_stock}`
+              {adjustProduct
+                ? `${adjustProduct.name} — Stock actual: ${adjustProduct.current_stock}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleReplenish} className="space-y-4">
+          <form onSubmit={handleAdjustStock} className="space-y-4">
             <div>
-              <Label htmlFor="replenish_qty">Cantidad a agregar</Label>
+              <Label htmlFor="adjust_qty">Cantidad real</Label>
               <Input
-                id="replenish_qty"
+                id="adjust_qty"
                 type="number"
-                min="1"
-                value={replenishQty}
-                onChange={(e) => setReplenishQty(e.target.value)}
-                placeholder="Ej: 24"
+                min="0"
+                value={adjustQty}
+                onChange={(e) => setAdjustQty(e.target.value)}
+                placeholder="Ej: 25"
                 autoFocus
                 required
               />
+              {adjustProduct && adjustQty !== "" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(() => {
+                    const diff = parseInt(adjustQty) - adjustProduct.current_stock;
+                    if (isNaN(diff)) return "";
+                    if (diff === 0) return "Sin cambios";
+                    const sign = diff > 0 ? "+" : "";
+                    return `Diferencia: ${sign}${diff} unidades`;
+                  })()}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="adjust_reason">Motivo (opcional)</Label>
+              <Input
+                id="adjust_reason"
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Ej: Error en reposición"
+              />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsReplenishOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsAdjustOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Reponer</Button>
+              <Button type="submit">Ajustar</Button>
             </div>
           </form>
         </DialogContent>
