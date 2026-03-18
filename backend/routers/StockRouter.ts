@@ -17,6 +17,9 @@ StockRouter.put("/stock/products/:id/mappings", StockController.setMappings);
 // Replenishment
 StockRouter.post("/stock/products/:id/replenish", StockController.replenish);
 
+// Stock adjustment (set exact quantity)
+StockRouter.patch("/stock/products/:id/adjust", StockController.adjustStock);
+
 // Low stock alerts
 StockRouter.get("/stock/alerts", StockController.getLowStockAlerts);
 

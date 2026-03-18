@@ -124,6 +124,22 @@ class StockController {
     }
   }
 
+  // ─── Stock Adjustment ───
+
+  public adjustStock(req: Request, res: Response): void {
+    try {
+      const id = Number(req.params.id);
+      const { new_quantity, reason } = req.body;
+      if (new_quantity == null || new_quantity < 0) {
+        res.status(400).json({ error: "La cantidad debe ser 0 o mayor" });
+        return;
+      }
+      res.json(StockModel.adjustStock(id, new_quantity, reason));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Error al ajustar stock" });
+    }
+  }
+
   // ─── Low Stock Alerts ───
 
   public getLowStockAlerts(_req: Request, res: Response): void {

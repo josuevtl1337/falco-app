@@ -140,3 +140,35 @@ FONTS */
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Command palette & animation utilities */
+@keyframes animate-in-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes animate-in-slide-top {
+  from { transform: translateY(-16px); }
+  to { transform: translateY(0); }
+}
+.animate-in {
+  animation: animate-in-fade 0.2s ease-out, animate-in-slide-top 0.2s ease-out;
+}
+
+/* cmdk overrides */
+[cmdk-root] {
+  font-family: inherit;
+}
+[cmdk-group-heading] {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+[cmdk-item] {
+  cursor: pointer;
+}
+[cmdk-item][data-selected="true"] {
+  background: var(--muted);
+}
