@@ -1,4 +1,5 @@
 import type { Response, Request } from "express";
+import { getLocalTimestamp } from "../db.ts";
 import ReportModel from "../models/ReportModel.ts";
 
 class ReportController {
@@ -21,7 +22,7 @@ class ReportController {
         topProduct = ReportModel.getTopProductForRange(from, to, shift);
         paymentBreakdown = ReportModel.getPaymentBreakdownForRange(from, to, shift);
       } else {
-        const d = date || new Date().toISOString().slice(0, 10);
+        const d = date || getLocalTimestamp().slice(0, 10);
         report = await ReportModel.getDailyReport(d, shift);
         topProduct = ReportModel.getTopProduct(d, shift);
         paymentBreakdown = ReportModel.getPaymentBreakdown(d, shift);

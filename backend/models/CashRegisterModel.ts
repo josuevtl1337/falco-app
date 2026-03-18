@@ -1,4 +1,4 @@
-import db from "../db.ts";
+import db, { getLocalTimestamp } from "../db.ts";
 import ShiftModel from "./ShiftModel.ts";
 
 export const BAKERY_PRODUCT_NAMES = [
@@ -56,8 +56,8 @@ export const CashRegisterModel = {
       return { register: null, bakeryProducts: BAKERY_PRODUCT_NAMES };
     }
 
-    // Convert ISO opened_at to SQLite-compatible format for comparison with orders.created_at
-    const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+    // opened_at is already in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) via getLocalTimestamp
+    const openedAtSqlite = register.opened_at;
 
     // Compute live sales totals for the open register
     const salesResult = db
@@ -122,10 +122,9 @@ export const CashRegisterModel = {
         throw new Error("There is already an open cash register. Close it before opening a new one.");
       }
 
-      const now = new Date();
-      const date = now.toISOString().split("T")[0];
-      // Store in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) for consistent comparisons with orders.created_at
-      const opened_at = now.toISOString().replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+      // Use Argentina timezone to match orders.created_at (also stored via getLocalTimestamp)
+      const opened_at = getLocalTimestamp();
+      const date = opened_at.split(" ")[0];
 
       const result = db
         .prepare(
@@ -214,7 +213,7 @@ export const CashRegisterModel = {
         order_count: number;
       };
 
-      const closed_at = new Date().toISOString();
+      const closed_at = getLocalTimestamp();
 
       db.prepare(
         `UPDATE cash_register_shifts
@@ -279,8 +278,8 @@ export const CashRegisterModel = {
       return stock;
     }
 
-    // Convert ISO opened_at to SQLite-compatible format
-    const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
+    // opened_at is already in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) via getLocalTimestamp
+    const openedAtSqlite = register.opened_at;
 
     const stockStart = JSON.parse(register.stock_start || "{}") as Record<
       string,

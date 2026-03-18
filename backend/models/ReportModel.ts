@@ -1,4 +1,4 @@
-import db from "../db.ts";
+import db, { getLocalTimestamp } from "../db.ts";
 
 class ReportModel {
   // =========================================
@@ -382,7 +382,7 @@ class ReportModel {
     description?: string;
     date: string;
   }): any {
-    const created_at = new Date().toISOString();
+    const created_at = getLocalTimestamp();
     return db
       .prepare(
         `INSERT INTO report_expenses (amount, category, description, date, created_at)

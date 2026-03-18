@@ -1,4 +1,4 @@
-import db from "../db.ts";
+import db, { getLocalTimestamp } from "../db.ts";
 
 export interface ISupplier {
   id?: number;
@@ -33,7 +33,7 @@ class SuppliersModel {
    */
   public createSupplier(supplier: ISupplier): { lastInsertRowid: number } {
     const { name, contact_info } = supplier;
-    const created_at = new Date().toISOString();
+    const created_at = getLocalTimestamp();
     const query = `
       INSERT INTO suppliers (name, contact_info, created_at) 
       VALUES (?, ?, ?)
