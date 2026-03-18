@@ -1,9 +1,11 @@
 # Falco App - Coffee Shop Management System
 
 ## Project Overview
+
 Falco is a desktop POS and management system for a coffee shop, built with Tauri v2.
 
 ## Tech Stack
+
 - **Frontend**: React 19 + TypeScript + Vite
 - **Backend**: Node.js + Express (port 3001) + SQLite (better-sqlite3)
 - **Desktop**: Tauri v2 (Rust)
@@ -13,6 +15,7 @@ Falco is a desktop POS and management system for a coffee shop, built with Tauri
 - **Toasts**: Sonner
 
 ## Project Structure
+
 ```
 src/                          # Frontend
   modules/                     # Feature modules (each has components/, pages/, hooks/, types/)
@@ -42,41 +45,52 @@ backend/                      # Backend API
 ## Conventions
 
 ### Language
+
 - **UI-facing text** is in **Spanish**: toasts, labels, headings, placeholders, button text, dialog titles
 - **Everything else** MUST be in **English**: variable names, function names, type/interface names, file names, folder names, database table names, column names, API route paths, component names, hook names, model names, controller names, router names, comments, CSS class names (custom), constants, enums, props
 - This is a strict rule: if it's internal code naming, it must be English. Only user-visible strings in the UI are Spanish.
 
 ### Frontend Module Pattern
+
 Every module in `src/modules/<name>/` follows:
+
 1. `index.tsx` — Main page component (default export)
 2. `components/` — Module-specific components
 3. `types/` — TypeScript interfaces (optional)
 4. `hooks/` — Custom hooks (optional)
 
 ### Backend Pattern
+
 For each feature:
+
 1. `routers/<Name>Router.ts` — Express router with route definitions
 2. `controllers/<Name>Controller.ts` — Request handlers
 3. `models/<Name>Model.ts` — SQLite queries using better-sqlite3
 
 ### API
+
 - Base URL: `http://localhost:3001/api`
 - All routers mounted at `/api` in `backend/server.ts`
 - Frontend fetches use plain `fetch()` (no axios)
 
 ### Routing
+
 - Routes defined in `src/routes/index.tsx` using react-router-dom
 - Path constants in `src/routes/paths.ts` (RoutePaths enum)
 - All pages lazy-loaded with `React.lazy()`
 - Sidebar navigation in `src/components/app-sidebar.tsx`
 
 ### Styling
+
 - Use Tailwind CSS utility classes
 - Dark mode via CSS variables: `text-[var(--primary-text)]`, etc.
 - shadcn components from `@/components/ui/`
 
 ## Commands
+
 - `npm run develop` — **Main command**: runs frontend + backend + Tauri together (uses `concurrently`)
 - `npm run dev` — Start Vite frontend only (port 1420)
 - `cd backend && npm run dev` — Start Express backend only (port 3001)
 - `npm run build` — Production build
+
+- Never use "confirm()" directly instead use window.confirm()

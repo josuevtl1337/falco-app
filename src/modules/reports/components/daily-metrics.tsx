@@ -16,6 +16,7 @@ import { toast } from "sonner";
 export default function DailyMetrics() {
   const [shift, setShift] = useState<"morning" | "afternoon" | "both">("both");
   const [timeFilter, setTimeFilter] = useState<string>("today");
+  const [showPaymentBreakdown, setShowPaymentBreakdown] = useState(false);
   const ordersRef = useRef<Order[]>([]);
 
   const [data] = useReports(timeFilter, shift);
@@ -82,18 +83,30 @@ export default function DailyMetrics() {
         return str;
       };
 
-      const headers = ["ID", "Hora", "Mesa", "Items", "Pago", "Total", "Estado"];
+      const headers = [
+        "ID",
+        "Hora",
+        "Mesa",
+        "Items",
+        "Pago",
+        "Total",
+        "Estado",
+      ];
       const rows = orders.map((o) => [
         o.id,
         o.created_at?.slice(11, 16) || "-",
         escapeCsvField(o.table_number || "-"),
-        escapeCsvField(o.items.map((i) => `${i.quantity} ${i.menu_item_name}`).join(", ")),
+        escapeCsvField(
+          o.items.map((i) => `${i.quantity} ${i.menu_item_name}`).join(", "),
+        ),
         escapeCsvField(o.payment_method_name || "-"),
         o.total_amount,
         o.status === "paid" ? "Pagado" : o.status,
       ]);
 
-      const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join(
+        "\n",
+      );
       const blob = new Blob(["\uFEFF" + csv], {
         type: "text/csv;charset=utf-8;",
       });
@@ -138,8 +151,6 @@ export default function DailyMetrics() {
       <Card className="border-slate-800 bg-slate-950/50 backdrop-blur">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
           {/* Turnos */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-200">Turno</label>
@@ -149,27 +160,19 @@ export default function DailyMetrics() {
               onValueChange={(value) => value && setShift(value as any)}
               className="justify-start"
             >
-              <ToggleGroupItem
-                value="morning"
-                className="rounded-lg border border-slate-700 hover:bg-slate-800 data-[state=on]:bg-blue-600 data-[state=on]:border-blue-500"
-              >
+              <ToggleGroupItem value="morning" className="rounded-lg border">
                 <span className="text-sm">Mañana</span>
               </ToggleGroupItem>
-              <ToggleGroupItem
-                value="afternoon"
-                className="rounded-lg border border-slate-700 hover:bg-slate-800 data-[state=on]:bg-blue-600 data-[state=on]:border-blue-500"
-              >
+              <ToggleGroupItem value="afternoon" className="rounded-lg border">
                 <span className="text-sm">Tarde</span>
               </ToggleGroupItem>
-              <ToggleGroupItem
-                value="both"
-                className="rounded-lg border border-slate-700 hover:bg-slate-800 data-[state=on]:bg-blue-600 data-[state=on]:border-blue-500"
-              >
+              <ToggleGroupItem value="both" className="rounded-lg border">
                 <span className="text-sm">Ambos</span>
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
-
+        </CardHeader>
+        <CardContent className="space-y-4">
           {/* Período de tiempo */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-200">
@@ -187,11 +190,7 @@ export default function DailyMetrics() {
                 <Button
                   key={value}
                   variant={timeFilter === value ? "default" : "outline"}
-                  className={`rounded-lg text-xs md:text-sm font-medium transition-all ${
-                    timeFilter === value
-                      ? "bg-blue-600 hover:bg-blue-700 border-blue-500"
-                      : "border-slate-700 hover:bg-slate-800 text-slate-300"
-                  }`}
+                  className={`rounded-lg text-xs md:text-sm font-medium transition-all`}
                   onClick={() => setTimeFilter(value)}
                 >
                   {label}
@@ -203,7 +202,7 @@ export default function DailyMetrics() {
       </Card>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Total vendido */}
         <Card className="border-slate-800 bg-gradient-to-br from-blue-950/50 to-slate-950/50 hover:border-blue-700/50 transition-all">
           <CardHeader className="pb-3">
@@ -213,7 +212,11 @@ export default function DailyMetrics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-400">
-              ${data?.total?.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) ?? 0}
+              $
+              {data?.total?.toLocaleString("es-AR", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }) ?? 0}
             </div>
             <p className="text-xs text-slate-500 mt-1">{periodLabel}</p>
           </CardContent>
@@ -245,7 +248,11 @@ export default function DailyMetrics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-400">
-              ${data?.avg?.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) ?? 0}
+              $
+              {data?.avg?.toLocaleString("es-AR", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }) ?? 0}
             </div>
             <p className="text-xs text-slate-500 mt-1">Por cada transacción</p>
           </CardContent>
@@ -272,70 +279,97 @@ export default function DailyMetrics() {
       </div>
 
       {/* Payment Method Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-slate-800 bg-gradient-to-br from-emerald-950/50 to-slate-950/50 hover:border-emerald-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Efectivo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
-              ${paymentData.cash.total.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-slate-500">
-                {paymentData.cash.count} orden{paymentData.cash.count !== 1 ? "es" : ""}
-              </span>
-              <span className="text-xs font-medium text-emerald-400/80">
-                {paymentData.cash.pct}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-gradient-to-br from-sky-950/50 to-slate-950/50 hover:border-sky-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Transferencia
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-sky-400">
-              ${paymentData.transfer.total.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-slate-500">
-                {paymentData.transfer.count} orden{paymentData.transfer.count !== 1 ? "es" : ""}
-              </span>
-              <span className="text-xs font-medium text-sky-400/80">
-                {paymentData.transfer.pct}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-gradient-to-br from-amber-950/50 to-slate-950/50 hover:border-amber-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Otros (Tarjetas, QR)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-400">
-              ${paymentData.other.total.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-slate-500">
-                {paymentData.other.count} orden{paymentData.other.count !== 1 ? "es" : ""}
-              </span>
-              <span className="text-xs font-medium text-amber-400/80">
-                {paymentData.other.pct}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="px-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-slate-700 hover:bg-slate-800 text-slate-300"
+          onClick={() => setShowPaymentBreakdown((v) => !v)}
+        >
+          {showPaymentBreakdown ? "Ocultar" : "Formas de Pago"}
+        </Button>
       </div>
+      {showPaymentBreakdown && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-slate-800 bg-gradient-to-br from-emerald-950/50 to-slate-950/50 hover:border-emerald-700/50 transition-all">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-300">
+                Efectivo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-400">
+                $
+                {paymentData.cash.total.toLocaleString("es-AR", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-500">
+                  {paymentData.cash.count} orden
+                  {paymentData.cash.count !== 1 ? "es" : ""}
+                </span>
+                <span className="text-xs font-medium text-emerald-400/80">
+                  {paymentData.cash.pct}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-gradient-to-br from-sky-950/50 to-slate-950/50 hover:border-sky-700/50 transition-all">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-300">
+                Transferencia
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-sky-400">
+                $
+                {paymentData.transfer.total.toLocaleString("es-AR", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-500">
+                  {paymentData.transfer.count} orden
+                  {paymentData.transfer.count !== 1 ? "es" : ""}
+                </span>
+                <span className="text-xs font-medium text-sky-400/80">
+                  {paymentData.transfer.pct}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-gradient-to-br from-amber-950/50 to-slate-950/50 hover:border-amber-700/50 transition-all">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-300">
+                Otros (Tarjetas, QR)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-400">
+                $
+                {paymentData.other.total.toLocaleString("es-AR", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-500">
+                  {paymentData.other.count} orden
+                  {paymentData.other.count !== 1 ? "es" : ""}
+                </span>
+                <span className="text-xs font-medium text-amber-400/80">
+                  {paymentData.other.pct}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Detalles */}
       <Card className="border-slate-800 bg-slate-950/50">

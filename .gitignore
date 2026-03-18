@@ -18,3 +18,6 @@ backend/*.db
 
 # backups (si los tenés)
 backups/
+
+# reports
+reports/
