@@ -64,8 +64,8 @@ function CheckoutSheetContent({
         />
       </ScrollArea>
 
-      {/* Footer actions */}
-      <div className="p-4 border-t border-[var(--card-border)] flex gap-2">
+      {/* Footer actions — pb-8 prevents Windows taskbar overlap */}
+      <div className="p-4 pb-8 border-t border-[var(--card-border)] flex gap-2">
         <Button
           onClick={() => onPrint(paymentData ?? undefined)}
           disabled={!paymentData}
