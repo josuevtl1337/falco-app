@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   IconPlus,
   IconPencil,
-  IconAdjustments,
   IconPower,
   IconHistory,
   IconAlertTriangle,
@@ -50,7 +49,6 @@ function StockLevelBar({ current, threshold }: { current: number; threshold: num
           className={`absolute inset-y-0 left-0 bg-gradient-to-r ${barColor} rounded-full transition-all duration-500`}
           style={{ width: `${percentage}%` }}
         />
-        {/* Threshold marker */}
         <div
           className="absolute top-0 h-full w-0.5 bg-muted-foreground/40"
           style={{ left: `${thresholdPosition}%` }}
@@ -84,12 +82,7 @@ function StockProductsTab() {
   // Mapping state
   const [selectedMenuItemIds, setSelectedMenuItemIds] = useState<number[]>([]);
   const [loadingMappings, setLoadingMappings] = useState(false);
-
-  // Adjust stock dialog
-  const [adjustProduct, setAdjustProduct] = useState<StockProduct | null>(null);
-  const [adjustQty, setAdjustQty] = useState("");
-  const [adjustReason, setAdjustReason] = useState("");
-  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [menuSearchTerm, setMenuSearchTerm] = useState("");
 
   // Movements dialog
   const [movementsProductId, setMovementsProductId] = useState<number | null>(null);
@@ -120,10 +113,22 @@ function StockProductsTab() {
     loadAllMappings();
   }, [products]);
 
+  const filteredMenuItems = useMemo(() => {
+    const active = menuItems.filter((mi) => mi.is_active);
+    if (!menuSearchTerm.trim()) return active;
+    const term = menuSearchTerm.toLowerCase();
+    return active.filter(
+      (mi) =>
+        mi.name.toLowerCase().includes(term) ||
+        (mi.category_name && mi.category_name.toLowerCase().includes(term))
+    );
+  }, [menuItems, menuSearchTerm]);
+
   function resetForm() {
     setFormData({ name: "", current_stock: "0", alert_threshold: "5" });
     setSelectedMenuItemIds([]);
     setEditingProduct(null);
+    setMenuSearchTerm("");
   }
 
   function openCreateDialog() {
@@ -138,6 +143,7 @@ function StockProductsTab() {
       current_stock: product.current_stock.toString(),
       alert_threshold: product.alert_threshold.toString(),
     });
+    setMenuSearchTerm("");
 
     setLoadingMappings(true);
     try {
@@ -179,11 +185,27 @@ function StockProductsTab() {
 
       const productId = editingProduct ? editingProduct.id : (await res.json()).id;
 
+      // Save mappings
       await fetch(`${STOCK_API}/products/${productId}/mappings`, {
         method: "PUT",
         headers: JSON_HEADERS,
         body: JSON.stringify({ menu_item_ids: selectedMenuItemIds }),
       });
+
+      // Adjust stock if editing and quantity changed
+      if (editingProduct) {
+        const newQty = parseInt(formData.current_stock);
+        if (!isNaN(newQty) && newQty >= 0 && newQty !== editingProduct.current_stock) {
+          await fetch(`${STOCK_API}/products/${editingProduct.id}/adjust`, {
+            method: "PATCH",
+            headers: JSON_HEADERS,
+            body: JSON.stringify({
+              new_quantity: newQty,
+              reason: "Corrección manual",
+            }),
+          });
+        }
+      }
 
       toast.success(editingProduct ? "Producto actualizado" : "Producto creado");
       setIsFormOpen(false);
@@ -212,45 +234,6 @@ function StockProductsTab() {
     }
   }
 
-  async function handleAdjustStock(e: React.FormEvent) {
-    e.preventDefault();
-    if (!adjustProduct) return;
-
-    const qty = parseInt(adjustQty);
-    if (isNaN(qty) || qty < 0) {
-      toast.error("La cantidad debe ser 0 o mayor");
-      return;
-    }
-
-    try {
-      const res = await fetch(`${STOCK_API}/products/${adjustProduct.id}/adjust`, {
-        method: "PATCH",
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
-          new_quantity: qty,
-          reason: adjustReason || "Corrección manual",
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        toast.error(errData.error || "Error al ajustar stock");
-        return;
-      }
-      const diff = qty - adjustProduct.current_stock;
-      const sign = diff >= 0 ? "+" : "";
-      toast.success(
-        `Stock ajustado: ${adjustProduct.name} → ${qty} (${sign}${diff})`
-      );
-      setIsAdjustOpen(false);
-      setAdjustQty("");
-      setAdjustReason("");
-      setAdjustProduct(null);
-      refetch();
-    } catch {
-      toast.error("Error al ajustar stock");
-    }
-  }
-
   function toggleMenuItem(menuItemId: number) {
     setSelectedMenuItemIds((prev) =>
       prev.includes(menuItemId)
@@ -266,6 +249,11 @@ function StockProductsTab() {
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Compute stock diff for the edit dialog
+  const stockDiff = editingProduct
+    ? parseInt(formData.current_stock) - editingProduct.current_stock
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -385,21 +373,6 @@ function StockProductsTab() {
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                      title="Ajustar stock"
-                      onClick={() => {
-                        setAdjustProduct(product);
-                        setAdjustQty(product.current_stock.toString());
-                        setAdjustReason("");
-                        setIsAdjustOpen(true);
-                      }}
-                    >
-                      <IconAdjustments size={14} />
-                      Ajustar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
                       title="Historial"
                       onClick={() => {
                         setMovementsProductId(product.id);
@@ -428,7 +401,7 @@ function StockProductsTab() {
         </div>
       )}
 
-      {/* Create / Edit dialog */}
+      {/* Create / Edit dialog (unified with stock adjustment) */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -437,7 +410,7 @@ function StockProductsTab() {
             </DialogTitle>
             <DialogDescription>
               {editingProduct
-                ? "Modifica el producto y sus ítems del menú asociados"
+                ? "Modifica el producto, ajustá el stock y gestioná ítems asociados"
                 : "Crea un producto de stock y asociá ítems del menú"}
             </DialogDescription>
           </DialogHeader>
@@ -453,18 +426,26 @@ function StockProductsTab() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {!editingProduct && (
-                <div>
-                  <Label htmlFor="current_stock">Stock Inicial</Label>
-                  <Input
-                    id="current_stock"
-                    type="number"
-                    min="0"
-                    value={formData.current_stock}
-                    onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
-                  />
-                </div>
-              )}
+              <div>
+                <Label htmlFor="current_stock">
+                  {editingProduct ? "Cantidad Real" : "Stock Inicial"}
+                </Label>
+                <Input
+                  id="current_stock"
+                  type="number"
+                  min="0"
+                  value={formData.current_stock}
+                  onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
+                />
+                {editingProduct && formData.current_stock !== "" && !isNaN(stockDiff) && stockDiff !== 0 && (
+                  <p className="text-xs mt-1">
+                    {stockDiff > 0
+                      ? <span className="text-emerald-400 font-medium">+{stockDiff} unidades</span>
+                      : <span className="text-red-400 font-medium">{stockDiff} unidades</span>
+                    }
+                  </p>
+                )}
+              </div>
               <div>
                 <Label htmlFor="alert_threshold">Umbral de Alerta</Label>
                 <Input
@@ -485,29 +466,44 @@ function StockProductsTab() {
               {loadingMappings ? (
                 <p className="text-sm text-muted-foreground">Cargando...</p>
               ) : (
-                <ScrollArea className="h-48 rounded-md border p-3">
-                  <div className="space-y-2">
-                    {menuItems
-                      .filter((mi) => mi.is_active)
-                      .map((mi) => (
-                        <label
-                          key={mi.id}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
-                        >
-                          <Checkbox
-                            checked={selectedMenuItemIds.includes(mi.id)}
-                            onCheckedChange={() => toggleMenuItem(mi.id)}
-                          />
-                          <span className="text-sm">{mi.name}</span>
-                          {mi.category_name && (
-                            <span className="text-xs text-muted-foreground ml-auto">
-                              {mi.category_name}
-                            </span>
-                          )}
-                        </label>
-                      ))}
+                <>
+                  <div className="relative mb-2">
+                    <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar ítem de la carta..."
+                      value={menuSearchTerm}
+                      onChange={(e) => setMenuSearchTerm(e.target.value)}
+                      className="pl-8 h-8 text-sm"
+                    />
                   </div>
-                </ScrollArea>
+                  <ScrollArea className="h-48 rounded-md border p-3">
+                    <div className="space-y-2">
+                      {filteredMenuItems.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">
+                          No se encontraron ítems
+                        </p>
+                      ) : (
+                        filteredMenuItems.map((mi) => (
+                          <label
+                            key={mi.id}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                          >
+                            <Checkbox
+                              checked={selectedMenuItemIds.includes(mi.id)}
+                              onCheckedChange={() => toggleMenuItem(mi.id)}
+                            />
+                            <span className="text-sm">{mi.name}</span>
+                            {mi.category_name && (
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {mi.category_name}
+                              </span>
+                            )}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
               )}
               {selectedMenuItemIds.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -521,61 +517,6 @@ function StockProductsTab() {
                 Cancelar
               </Button>
               <Button type="submit">Guardar</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Adjust stock dialog */}
-      <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Ajustar Stock</DialogTitle>
-            <DialogDescription>
-              {adjustProduct
-                ? `${adjustProduct.name} — Stock actual: ${adjustProduct.current_stock}`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAdjustStock} className="space-y-4">
-            <div>
-              <Label htmlFor="adjust_qty">Cantidad real</Label>
-              <Input
-                id="adjust_qty"
-                type="number"
-                min="0"
-                value={adjustQty}
-                onChange={(e) => setAdjustQty(e.target.value)}
-                placeholder="Ej: 25"
-                autoFocus
-                required
-              />
-              {adjustProduct && adjustQty !== "" && (
-                <p className="text-xs mt-1.5">
-                  {(() => {
-                    const diff = parseInt(adjustQty) - adjustProduct.current_stock;
-                    if (isNaN(diff)) return "";
-                    if (diff === 0) return <span className="text-muted-foreground">Sin cambios</span>;
-                    if (diff > 0) return <span className="text-emerald-400 font-medium">+{diff} unidades</span>;
-                    return <span className="text-red-400 font-medium">{diff} unidades</span>;
-                  })()}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="adjust_reason">Motivo (opcional)</Label>
-              <Input
-                id="adjust_reason"
-                value={adjustReason}
-                onChange={(e) => setAdjustReason(e.target.value)}
-                placeholder="Ej: Error en reposición"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsAdjustOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">Ajustar</Button>
             </div>
           </form>
         </DialogContent>
