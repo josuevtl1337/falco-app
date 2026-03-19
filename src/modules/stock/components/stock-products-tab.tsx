@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,15 +13,60 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, PackagePlus, Power, AlertTriangle, History } from "lucide-react";
+import {
+  IconPlus,
+  IconPencil,
+  IconAdjustments,
+  IconPower,
+  IconHistory,
+  IconAlertTriangle,
+  IconPackageOff,
+  IconSearch,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useStockProducts, useMenuItems } from "../hooks/use-stock";
 import type { StockProduct, StockMenuItemMap } from "../types";
 import StockMovementsDialog from "./stock-movements-dialog";
 
 const STOCK_API = "http://localhost:3001/api/stock";
-
 const JSON_HEADERS = { "Content-Type": "application/json" };
+
+function StockLevelBar({ current, threshold }: { current: number; threshold: number }) {
+  const maxDisplay = Math.max(threshold * 3, current, 1);
+  const percentage = Math.min((current / maxDisplay) * 100, 100);
+  const isLow = current <= threshold && current > 0;
+  const isEmpty = current === 0;
+
+  let barColor = "from-emerald-500 to-emerald-400";
+  if (isEmpty) barColor = "from-red-500 to-red-400";
+  else if (isLow) barColor = "from-amber-500 to-amber-400";
+
+  const thresholdPosition = Math.min((threshold / maxDisplay) * 100, 100);
+
+  return (
+    <div className="w-full">
+      <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 bg-gradient-to-r ${barColor} rounded-full transition-all duration-500`}
+          style={{ width: `${percentage}%` }}
+        />
+        {/* Threshold marker */}
+        <div
+          className="absolute top-0 h-full w-0.5 bg-muted-foreground/40"
+          style={{ left: `${thresholdPosition}%` }}
+        />
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className={`text-xs font-medium ${isEmpty ? "text-red-400" : isLow ? "text-amber-400" : "text-emerald-400"}`}>
+          {current} uds
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          umbral: {threshold}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function StockProductsTab() {
   const { products, refetch } = useStockProducts();
@@ -47,7 +85,7 @@ function StockProductsTab() {
   const [selectedMenuItemIds, setSelectedMenuItemIds] = useState<number[]>([]);
   const [loadingMappings, setLoadingMappings] = useState(false);
 
-  // Adjust stock dialog (replaces both replenish and adjust)
+  // Adjust stock dialog
   const [adjustProduct, setAdjustProduct] = useState<StockProduct | null>(null);
   const [adjustQty, setAdjustQty] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
@@ -230,224 +268,263 @@ function StockProductsTab() {
   );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Productos de Stock</h2>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar producto de stock..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button onClick={openCreateDialog} className="gap-1.5">
+          <IconPlus size={16} />
           Agregar Producto
         </Button>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProduct ? "Editar Producto" : "Nuevo Producto de Stock"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingProduct
-                  ? "Modifica el producto y sus ítems del menú asociados"
-                  : "Crea un producto de stock y asociá ítems del menú"}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Nombre *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ej: Medialunas Dulces"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {!editingProduct && (
-                  <div>
-                    <Label htmlFor="current_stock">Stock Inicial</Label>
-                    <Input
-                      id="current_stock"
-                      type="number"
-                      min="0"
-                      value={formData.current_stock}
-                      onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
-                    />
-                  </div>
-                )}
-                <div>
-                  <Label htmlFor="alert_threshold">Umbral de Alerta</Label>
-                  <Input
-                    id="alert_threshold"
-                    type="number"
-                    min="0"
-                    value={formData.alert_threshold}
-                    onChange={(e) => setFormData({ ...formData, alert_threshold: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Ítems del Menú Asociados</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Cuando se venda cualquiera de estos ítems, se restará 1 unidad de stock
-                </p>
-                {loadingMappings ? (
-                  <p className="text-sm text-muted-foreground">Cargando...</p>
-                ) : (
-                  <ScrollArea className="h-48 rounded-md border p-3">
-                    <div className="space-y-2">
-                      {menuItems
-                        .filter((mi) => mi.is_active)
-                        .map((mi) => (
-                          <label
-                            key={mi.id}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
-                          >
-                            <Checkbox
-                              checked={selectedMenuItemIds.includes(mi.id)}
-                              onCheckedChange={() => toggleMenuItem(mi.id)}
-                            />
-                            <span className="text-sm">{mi.name}</span>
-                            {mi.category_name && (
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {mi.category_name}
-                              </span>
-                            )}
-                          </label>
-                        ))}
-                    </div>
-                  </ScrollArea>
-                )}
-                {selectedMenuItemIds.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {selectedMenuItemIds.length} ítem(s) seleccionado(s)
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Guardar</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      <div className="mb-4">
-        <Input
-          placeholder="Buscar producto de stock..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      {/* Product Cards Grid */}
+      {filteredProducts.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <IconPackageOff size={40} className="mx-auto text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground">
+              No se encontraron productos de stock
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {filteredProducts.map((product) => {
+            const lowStock = isLowStock(product) && !!product.active;
+            const outOfStock = product.current_stock === 0 && !!product.active;
+            const mappings = productMappings[product.id] ?? [];
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Stock Actual</TableHead>
-            <TableHead>Umbral</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Ítems Asociados</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredProducts.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                No se encontraron productos de stock
-              </TableCell>
-            </TableRow>
-          ) : (
-            filteredProducts.map((product) => {
-              const lowStock = isLowStock(product) && !!product.active;
-              return (
-                <TableRow key={product.id} className={lowStock ? "bg-destructive/10" : ""}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {product.name}
-                      {lowStock && <AlertTriangle className="h-4 w-4 text-destructive" />}
+            let cardBorder = "border-border/50";
+            let cardBg = "";
+            if (outOfStock) {
+              cardBorder = "border-red-500/40";
+              cardBg = "bg-gradient-to-br from-red-500/5 to-transparent";
+            } else if (lowStock) {
+              cardBorder = "border-amber-500/30";
+              cardBg = "bg-gradient-to-br from-amber-500/5 to-transparent";
+            }
+
+            return (
+              <Card
+                key={product.id}
+                className={`${cardBorder} ${cardBg} hover:shadow-md transition-all duration-200 ${!product.active ? "opacity-50" : ""}`}
+              >
+                <CardContent className="pt-4 pb-3 px-4 space-y-3">
+                  {/* Product header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-sm truncate">
+                          {product.name}
+                        </h3>
+                        {outOfStock && (
+                          <span className="shrink-0 flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-red-400 text-[10px] font-bold uppercase animate-pulse">
+                            <IconPackageOff size={10} />
+                            Agotado
+                          </span>
+                        )}
+                        {lowStock && !outOfStock && (
+                          <span className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-amber-400 text-[10px] font-semibold">
+                            <IconAlertTriangle size={10} />
+                            Bajo
+                          </span>
+                        )}
+                      </div>
+                      {/* Mappings */}
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {mappings.length > 0
+                          ? mappings.map((m) => (
+                              <Badge key={m.id} variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                {m.menu_item_name}
+                              </Badge>
+                            ))
+                          : (
+                            <span className="text-[10px] text-muted-foreground italic">
+                              Sin ítems asociados
+                            </span>
+                          )
+                        }
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={lowStock ? "text-destructive font-bold" : ""}>
-                      {product.current_stock}
-                    </span>
-                  </TableCell>
-                  <TableCell>{product.alert_threshold}</TableCell>
-                  <TableCell>
-                    <Badge variant={product.active ? "default" : "secondary"}>
+                    <Badge
+                      variant={product.active ? "default" : "secondary"}
+                      className="text-[10px] shrink-0"
+                    >
                       {product.active ? "Activo" : "Inactivo"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(productMappings[product.id] ?? []).length > 0
-                        ? productMappings[product.id].map((m) => (
-                            <Badge key={m.id} variant="outline" className="text-xs">
-                              {m.menu_item_name}
-                            </Badge>
-                          ))
-                        : <span className="text-xs text-muted-foreground">Sin mapeos</span>
-                      }
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="Editar producto"
-                        onClick={() => openEditDialog(product)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="Ajustar stock"
-                        onClick={() => {
-                          setAdjustProduct(product);
-                          setAdjustQty(product.current_stock.toString());
-                          setAdjustReason("");
-                          setIsAdjustOpen(true);
-                        }}
-                      >
-                        <PackagePlus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title="Historial"
-                        onClick={() => {
-                          setMovementsProductId(product.id);
-                          setIsMovementsOpen(true);
-                        }}
-                      >
-                        <History className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        title={product.active ? "Desactivar" : "Activar"}
-                        onClick={() => handleToggleActive(product)}
-                      >
-                        <Power
-                          className={`h-4 w-4 ${product.active ? "text-green-500" : "text-muted-foreground"}`}
-                        />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+                  </div>
+
+                  {/* Stock level bar */}
+                  <StockLevelBar
+                    current={product.current_stock}
+                    threshold={product.alert_threshold}
+                  />
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-1 pt-1 border-t border-border/30">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                      title="Editar producto"
+                      onClick={() => openEditDialog(product)}
+                    >
+                      <IconPencil size={14} />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                      title="Ajustar stock"
+                      onClick={() => {
+                        setAdjustProduct(product);
+                        setAdjustQty(product.current_stock.toString());
+                        setAdjustReason("");
+                        setIsAdjustOpen(true);
+                      }}
+                    >
+                      <IconAdjustments size={14} />
+                      Ajustar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                      title="Historial"
+                      onClick={() => {
+                        setMovementsProductId(product.id);
+                        setIsMovementsOpen(true);
+                      }}
+                    >
+                      <IconHistory size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      title={product.active ? "Desactivar" : "Activar"}
+                      onClick={() => handleToggleActive(product)}
+                    >
+                      <IconPower
+                        size={14}
+                        className={product.active ? "text-green-500" : "text-muted-foreground"}
+                      />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create / Edit dialog */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProduct ? "Editar Producto" : "Nuevo Producto de Stock"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingProduct
+                ? "Modifica el producto y sus ítems del menú asociados"
+                : "Crea un producto de stock y asociá ítems del menú"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nombre *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ej: Medialunas Dulces"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {!editingProduct && (
+                <div>
+                  <Label htmlFor="current_stock">Stock Inicial</Label>
+                  <Input
+                    id="current_stock"
+                    type="number"
+                    min="0"
+                    value={formData.current_stock}
+                    onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
+                  />
+                </div>
+              )}
+              <div>
+                <Label htmlFor="alert_threshold">Umbral de Alerta</Label>
+                <Input
+                  id="alert_threshold"
+                  type="number"
+                  min="0"
+                  value={formData.alert_threshold}
+                  onChange={(e) => setFormData({ ...formData, alert_threshold: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Ítems del Menú Asociados</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Cuando se venda cualquiera de estos ítems, se restará 1 unidad de stock
+              </p>
+              {loadingMappings ? (
+                <p className="text-sm text-muted-foreground">Cargando...</p>
+              ) : (
+                <ScrollArea className="h-48 rounded-md border p-3">
+                  <div className="space-y-2">
+                    {menuItems
+                      .filter((mi) => mi.is_active)
+                      .map((mi) => (
+                        <label
+                          key={mi.id}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                        >
+                          <Checkbox
+                            checked={selectedMenuItemIds.includes(mi.id)}
+                            onCheckedChange={() => toggleMenuItem(mi.id)}
+                          />
+                          <span className="text-sm">{mi.name}</span>
+                          {mi.category_name && (
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {mi.category_name}
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                  </div>
+                </ScrollArea>
+              )}
+              {selectedMenuItemIds.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedMenuItemIds.length} ítem(s) seleccionado(s)
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Guardar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Adjust stock dialog */}
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
@@ -474,13 +551,13 @@ function StockProductsTab() {
                 required
               />
               {adjustProduct && adjustQty !== "" && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs mt-1.5">
                   {(() => {
                     const diff = parseInt(adjustQty) - adjustProduct.current_stock;
                     if (isNaN(diff)) return "";
-                    if (diff === 0) return "Sin cambios";
-                    const sign = diff > 0 ? "+" : "";
-                    return `Diferencia: ${sign}${diff} unidades`;
+                    if (diff === 0) return <span className="text-muted-foreground">Sin cambios</span>;
+                    if (diff > 0) return <span className="text-emerald-400 font-medium">+{diff} unidades</span>;
+                    return <span className="text-red-400 font-medium">{diff} unidades</span>;
                   })()}
                 </p>
               )}
