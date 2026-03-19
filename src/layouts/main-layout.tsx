@@ -24,7 +24,7 @@ export default function MainLayout() {
             <button
               onClick={() =>
                 document.dispatchEvent(
-                  new KeyboardEvent("keydown", { key: "k", ctrlKey: true })
+                  new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
                 )
               }
               className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/50 rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
@@ -36,7 +36,7 @@ export default function MainLayout() {
             </button>
           </header>
 
-          <main className="overflow-auto p-4 lg:p-6">
+          <main className="overflow-auto p-2">
             <AnimatePresence mode="wait">
               <PageTransition key={location.pathname}>
                 <Outlet />

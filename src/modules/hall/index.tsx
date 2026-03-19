@@ -69,7 +69,7 @@ function OrdersPage() {
     if (isRegisterOpen) {
       if (orders.length > 0) {
         toast.error(
-          "Cerrá todas las comandas abiertas antes de cerrar la caja"
+          "Cerrá todas las comandas abiertas antes de cerrar la caja",
         );
         return;
       }
@@ -89,7 +89,7 @@ function OrdersPage() {
         toast.error(err.message || "Error al abrir caja");
       }
     },
-    [openRegister]
+    [openRegister],
   );
 
   const handleCloseRegister = useCallback(
@@ -105,7 +105,7 @@ function OrdersPage() {
         toast.error(err.message || "Error al cerrar caja");
       }
     },
-    [closeRegister]
+    [closeRegister],
   );
 
   const computeSubtotal = (items: OrderStateData["items"]) =>
@@ -122,7 +122,7 @@ function OrdersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const addOrIncrementItem = (
     items: OrderStateData["items"],
-    product: OrderProduct
+    product: OrderProduct,
   ) => {
     const idx = items.findIndex((i) => i.menu_item_id === product.id);
     if (idx >= 0) {
@@ -133,7 +133,7 @@ function OrdersPage() {
               quantity: it.quantity + 1,
               subtotal: it.unit_price * (it.quantity + 1),
             }
-          : it
+          : it,
       );
     }
     return [...items, makeOrderItem(product)];
@@ -158,7 +158,7 @@ function OrdersPage() {
         };
       });
     },
-    [addOrIncrementItem, seat, shift]
+    [addOrIncrementItem, seat, shift],
   );
 
   const updateProductQty = useCallback((productId: string, qty: number) => {
@@ -172,7 +172,7 @@ function OrdersPage() {
                 quantity: Math.max(1, qty),
                 subtotal: p.unit_price * Math.max(1, qty),
               }
-            : p
+            : p,
         )
         .filter((p) => p.quantity > 0);
       return { ...prev, items, total_amount: computeSubtotal(items) };
@@ -189,7 +189,7 @@ function OrdersPage() {
 
   const clearProducts = useCallback(() => {
     setCurrentOrder((prev) =>
-      prev ? { ...prev, items: [], total_amount: 0 } : prev
+      prev ? { ...prev, items: [], total_amount: 0 } : prev,
     );
   }, []);
 
@@ -199,7 +199,7 @@ function OrdersPage() {
       const found = orders.find((o) => o.table_number === tableNumber) ?? null;
       setCurrentOrder(found);
     },
-    [orders]
+    [orders],
   );
 
   const onCommand = useCallback(async () => {
@@ -257,7 +257,7 @@ function OrdersPage() {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
-          }
+          },
         );
 
         if (!res.ok) {
@@ -282,7 +282,7 @@ function OrdersPage() {
         toast.error("Error de conexión al procesar el pago");
       }
     },
-    [currentOrder]
+    [currentOrder],
   );
 
   const onEditCommand = useCallback(async () => {
@@ -305,7 +305,7 @@ function OrdersPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        }
+        },
       );
       if (!res.ok) throw new Error("Network response was not ok");
       toast.success("Se ha editado la comanda  :) ");
@@ -353,7 +353,7 @@ function OrdersPage() {
         console.error("Error printing order:", error);
       }
     },
-    [currentOrder]
+    [currentOrder],
   );
 
   const getAllOrders = async () => {
@@ -439,10 +439,7 @@ function OrdersPage() {
       </div>
 
       {/* Checkout Sheet */}
-      <Sheet
-        open={checkoutOpen}
-        onOpenChange={setCheckoutOpen}
-      >
+      <Sheet open={checkoutOpen} onOpenChange={setCheckoutOpen}>
         <SheetContent
           side="right"
           className="w-[480px] sm:max-w-[480px] bg-[var(--card-background)] border-l border-[var(--card-border)] text-white p-0"
@@ -452,9 +449,7 @@ function OrdersPage() {
               Cobro de orden
             </SheetTitle>
             <SheetDescription className="text-gray-400">
-              {currentOrder
-                ? `Orden para ${currentOrder.table_number}`
-                : ""}
+              {currentOrder ? `Orden para ${currentOrder.table_number}` : ""}
             </SheetDescription>
           </SheetHeader>
           {currentOrder && (
