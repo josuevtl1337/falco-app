@@ -28,8 +28,8 @@ function CheckoutSheetContent({
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 px-5">
+    <div className="flex flex-col h-full overflow-hidden">
+      <ScrollArea className="flex-1 min-h-0 px-5">
         {/* Order items */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
@@ -65,7 +65,7 @@ function CheckoutSheetContent({
       </ScrollArea>
 
       {/* Footer actions */}
-      <div className="p-4 border-t border-[var(--card-border)] flex gap-2">
+      <div className="p-4 border-t border-[var(--card-border)] flex gap-2 flex-shrink-0">
         <Button
           onClick={() => onPrint(paymentData ?? undefined)}
           disabled={!paymentData}
