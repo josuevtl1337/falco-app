@@ -235,6 +235,31 @@ export const StockModel = {
     })();
   },
 
+  // ─── Stock Adjustment (set to exact quantity) ───
+
+  adjustStock: (id: number, newQuantity: number, reason: string) => {
+    return db.transaction(() => {
+      const product = db
+        .prepare(`SELECT * FROM stock_products WHERE id = ?`)
+        .get(id) as StockProduct | undefined;
+
+      if (!product) throw new Error("Producto de stock no encontrado");
+
+      const change = newQuantity - product.current_stock;
+
+      db.prepare(
+        `UPDATE stock_products SET current_stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+      ).run(newQuantity, id);
+
+      db.prepare(
+        `INSERT INTO stock_movements (stock_product_id, quantity_change, previous_stock, new_stock, reason)
+         VALUES (?, ?, ?, ?, ?)`
+      ).run(id, change, product.current_stock, newQuantity, reason || "Ajuste manual");
+
+      return { ...product, current_stock: newQuantity };
+    })();
+  },
+
   // ─── Low Stock Alerts ───
 
   getLowStockAlerts: (): LowStockAlert[] => {
