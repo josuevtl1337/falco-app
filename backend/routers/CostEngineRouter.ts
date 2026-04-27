@@ -4,6 +4,7 @@ import SuppliersController from "../controllers/SuppliersController.ts";
 import RecipesController from "../controllers/RecipesController.ts";
 import CostProductsController from "../controllers/CostProductsController.ts";
 import FixedCostsController from "../controllers/FixedCostsController.ts";
+import CatalogSyncController from "../controllers/CatalogSyncController.ts";
 
 const CostEngineRouter = Router();
 
@@ -45,5 +46,9 @@ CostEngineRouter.get("/cost-engine/fixed-costs/:id", FixedCostsController.getFix
 CostEngineRouter.post("/cost-engine/fixed-costs", FixedCostsController.createFixedCost);
 CostEngineRouter.put("/cost-engine/fixed-costs/:id", FixedCostsController.updateFixedCost);
 CostEngineRouter.delete("/cost-engine/fixed-costs/:id", FixedCostsController.deleteFixedCost);
+
+// Sync de catalogo (cost engine)
+CostEngineRouter.get("/cost-engine/catalog/export", CatalogSyncController.exportCatalog);
+CostEngineRouter.post("/cost-engine/catalog/import", CatalogSyncController.importCatalog);
 
 export default CostEngineRouter;

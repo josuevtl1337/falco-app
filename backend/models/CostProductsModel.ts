@@ -25,6 +25,17 @@ export interface ICostProductWithDetails extends ICostProduct {
 
 class CostProductsModel {
   /**
+   * Recalcula todos los productos activos.
+   * Ãštil para normalizar precios cuando cambian costos base.
+   */
+  public recalculateAllActiveProducts(): void {
+    const rows = db.prepare("SELECT id FROM cost_products WHERE active = 1").all() as Array<{ id: number }>;
+    for (const row of rows) {
+      this.recalculateProductPrice(row.id);
+    }
+  }
+
+  /**
    * Obtiene todos los productos de costo activos con sus detalles
    */
   public getAllCostProducts(): ICostProductWithDetails[] {
@@ -245,11 +256,22 @@ class CostProductsModel {
       10
     );
 
-    // Actualizar en BD
+    const currentCalculated = product.calculated_cost || 0;
+    const currentSuggested = product.suggested_price || 0;
+    const currentRounded = product.rounded_price || 0;
+    const changed =
+      Math.abs(currentCalculated - priceCalculation.total_cost) > 0.009 ||
+      Math.abs(currentSuggested - priceCalculation.suggested_price) > 0.009 ||
+      Math.abs(currentRounded - priceCalculation.rounded_price) > 0.009;
+
+    if (!changed) {
+      return true;
+    }
+
     const query = `
-      UPDATE cost_products 
-      SET calculated_cost = ?, 
-          suggested_price = ?, 
+      UPDATE cost_products
+      SET calculated_cost = ?,
+          suggested_price = ?,
           rounded_price = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?

@@ -8,6 +8,7 @@ class CostProductsController {
    */
   public async getAllCostProducts(req: Request, res: Response): Promise<void> {
     try {
+      CostProductsModel.recalculateAllActiveProducts();
       const products = CostProductsModel.getAllCostProducts();
       res.status(200).json(products);
     } catch (error) {

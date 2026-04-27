@@ -11,6 +11,8 @@ export interface IMenuItem {
   updated_at?: string;
   category_id?: string | number;
   category_name?: string;
+  recipe_id?: number | null;
+  recipe_name?: string | null;
 }
 
 class MenuModel {
@@ -27,9 +29,12 @@ class MenuModel {
           menu.created_at,
           menu.updated_at, 
           menu.category_id, 
-          cat.name as category_name
+          cat.name as category_name,
+          menu.recipe_id,
+          r.name as recipe_name
           FROM menu_items menu
-          JOIN menu_category cat ON cat.category_id = menu.category_id`,
+          JOIN menu_category cat ON cat.category_id = menu.category_id
+          LEFT JOIN recipes r ON r.id = menu.recipe_id`,
       )
       .all();
     return data;
@@ -39,8 +44,8 @@ class MenuModel {
     item: Omit<IMenuItem, "id" | "created_at" | "updated_at">,
   ) {
     const stmt = db.prepare(`
-      INSERT INTO menu_items (slug, name, description, price, is_active, category_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO menu_items (slug, name, description, price, is_active, category_id, recipe_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -50,6 +55,7 @@ class MenuModel {
       item.price,
       item.is_active || 1,
       item.category_id,
+      item.recipe_id ?? null,
     );
 
     return result.lastInsertRowid;
@@ -86,6 +92,10 @@ class MenuModel {
       fields.push("category_id = ?");
       values.push(item.category_id);
     }
+    if (item.recipe_id !== undefined) {
+      fields.push("recipe_id = ?");
+      values.push(item.recipe_id);
+    }
 
     if (fields.length === 0) return false;
 
@@ -121,9 +131,12 @@ class MenuModel {
           menu.created_at,
           menu.updated_at, 
           menu.category_id, 
-          cat.name as category_name
+          cat.name as category_name,
+          menu.recipe_id,
+          r.name as recipe_name
           FROM menu_items menu
           JOIN menu_category cat ON cat.category_id = menu.category_id
+          LEFT JOIN recipes r ON r.id = menu.recipe_id
           WHERE menu.id = ?`,
       )
       .get(id);

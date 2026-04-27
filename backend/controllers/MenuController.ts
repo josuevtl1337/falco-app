@@ -14,7 +14,7 @@ class MenuController {
 
   public async createMenuItem(req: Request, res: Response): Promise<void> {
     try {
-      const { slug, name, description, price, category_id, is_active } =
+      const { slug, name, description, price, category_id, is_active, recipe_id } =
         req.body;
 
       if (!name || !price || !category_id) {
@@ -31,6 +31,9 @@ class MenuController {
         price: Number(price),
         category_id,
         is_active: is_active !== undefined ? Number(is_active) : 1,
+        recipe_id: recipe_id !== undefined && recipe_id !== null && recipe_id !== ""
+          ? Number(recipe_id)
+          : null,
       });
 
       const newItem = await MenuModel.getMenuItemById(id.toString());
@@ -44,7 +47,7 @@ class MenuController {
   public async updateMenuItem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { slug, name, description, price, category_id, is_active } =
+      const { slug, name, description, price, category_id, is_active, recipe_id } =
         req.body;
 
       if (!id) {
@@ -62,6 +65,10 @@ class MenuController {
       if (price !== undefined) updateData.price = Number(price);
       if (category_id !== undefined) updateData.category_id = category_id;
       if (is_active !== undefined) updateData.is_active = Number(is_active);
+      if (recipe_id !== undefined) {
+        updateData.recipe_id =
+          recipe_id === null || recipe_id === "" ? null : Number(recipe_id);
+      }
 
       const updated = await MenuModel.updateMenuItem(id, updateData);
 
