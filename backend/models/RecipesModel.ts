@@ -1,17 +1,17 @@
 import db from "../db.ts";
-import { calculateRecipeCost } from "../services/CostCalculationService.ts";
-import RawMaterialsModel from "./RawMaterialsModel.ts";
 
 /**
- * Convierte unidades a una unidad base para cálculos consistentes
+ * Converts units to base unit:
+ * - weight base: gr
+ * - volume base: ml
  */
 function convertToBaseUnit(quantity: number, unit: string): number {
   const conversions: Record<string, number> = {
-    'kg': 1000,      // 1 kg = 1000 gr
-    'gr': 1,         // base
-    'l': 1000,       // 1 l = 1000 ml
-    'ml': 1,         // base
-    'unidad': 1      // base
+    kg: 1000,
+    gr: 1,
+    l: 1000,
+    ml: 1,
+    unidad: 1,
   };
 
   return quantity * (conversions[unit] || 1);
@@ -37,45 +37,61 @@ export interface IRecipe {
 }
 
 export interface IRecipeWithDetails extends IRecipe {
-  ingredients: Array<IRecipeIngredient & {
-    raw_material_name?: string;
-    unit_cost?: number;
-    ingredient_cost?: number;
-  }>;
+  ingredients: Array<
+    IRecipeIngredient & {
+      raw_material_name?: string;
+      unit_cost?: number;
+      ingredient_cost?: number;
+    }
+  >;
 }
 
 class RecipesModel {
   /**
-   * Obtiene todas las recetas activas con sus ingredientes
+   * Gets active recipes with ingredients.
    */
   public getAllRecipes(): IRecipeWithDetails[] {
-    const recipes = db.prepare(`
-      SELECT * FROM recipes 
-      WHERE active = 1 
+    const recipes = db
+      .prepare(
+        `
+      SELECT * FROM recipes
+      WHERE active = 1
       ORDER BY name
-    `).all() as IRecipe[];
+    `
+      )
+      .all() as IRecipe[];
 
-    return recipes.map(recipe => this.getRecipeWithIngredients(recipe.id!));
+    // Normalize persisted costs if stale or previously miscalculated.
+    for (const recipe of recipes) {
+      if (recipe.id) {
+        this.recalculateRecipeCost(recipe.id);
+      }
+    }
+
+    return recipes.map((recipe) => this.getRecipeWithIngredients(recipe.id!));
   }
 
   /**
-   * Obtiene una receta por ID con todos sus detalles
+   * Gets recipe by id with ingredients.
    */
   public getRecipeById(id: number): IRecipeWithDetails | undefined {
     const recipe = db.prepare("SELECT * FROM recipes WHERE id = ?").get(id) as IRecipe | undefined;
     if (!recipe) return undefined;
 
+    this.recalculateRecipeCost(id);
     return this.getRecipeWithIngredients(id);
   }
 
   /**
-   * Obtiene una receta con sus ingredientes y costos calculados
+   * Returns recipe with ingredient cost details.
    */
   private getRecipeWithIngredients(recipeId: number): IRecipeWithDetails {
     const recipe = db.prepare("SELECT * FROM recipes WHERE id = ?").get(recipeId) as IRecipe;
-    
-    const ingredients = db.prepare(`
-      SELECT 
+
+    const ingredients = db
+      .prepare(
+        `
+      SELECT
         ri.*,
         rm.name as raw_material_name,
         rm.unit_cost,
@@ -83,62 +99,62 @@ class RecipesModel {
       FROM recipe_ingredients ri
       JOIN raw_materials rm ON ri.raw_material_id = rm.id
       WHERE ri.recipe_id = ?
-    `).all(recipeId) as Array<IRecipeIngredient & {
-      raw_material_name: string;
-      unit_cost: number;
-      purchase_unit: string;
-    }>;
+    `
+      )
+      .all(recipeId) as Array<
+      IRecipeIngredient & {
+        raw_material_name: string;
+        unit_cost: number;
+        purchase_unit: string;
+      }
+    >;
 
-    // Calcular costo de cada ingrediente
-    // Necesitamos convertir la cantidad del ingrediente a la unidad de compra
-    const ingredientsWithCosts = ingredients.map(ing => {
-      // Si la unidad del ingrediente es diferente a la unidad de compra, convertir
+    const ingredientsWithCosts = ingredients.map((ing) => {
       let quantityInPurchaseUnit = ing.quantity;
       if (ing.unit !== ing.purchase_unit) {
-        // Convertir cantidad del ingrediente a unidad de compra
         const ingredientInBase = convertToBaseUnit(ing.quantity, ing.unit);
         const purchaseUnitInBase = convertToBaseUnit(1, ing.purchase_unit);
         quantityInPurchaseUnit = ingredientInBase / purchaseUnitInBase;
       }
+
       return {
         ...ing,
-        ingredient_cost: quantityInPurchaseUnit * ing.unit_cost
+        ingredient_cost: quantityInPurchaseUnit * ing.unit_cost,
       };
     });
 
     return {
       ...recipe,
-      ingredients: ingredientsWithCosts
+      ingredients: ingredientsWithCosts,
     };
   }
 
   /**
-   * Crea una nueva receta con sus ingredientes
+   * Creates a recipe.
    */
   public createRecipe(recipe: IRecipe): { lastInsertRowid: number } {
     const { name, description, ingredients } = recipe;
 
-    // Insertar receta
-    const recipeQuery = `
-      INSERT INTO recipes (name, description) 
+    const recipeResult = db
+      .prepare(
+        `
+      INSERT INTO recipes (name, description)
       VALUES (?, ?)
-    `;
-    const recipeResult = db.prepare(recipeQuery).run(name, description || null);
+    `
+      )
+      .run(name, description || null);
     const recipeId = recipeResult.lastInsertRowid as number;
 
-    // Insertar ingredientes si existen
     if (ingredients && ingredients.length > 0) {
       this.updateRecipeIngredients(recipeId, ingredients);
     }
 
-    // Calcular y actualizar costo de receta
     this.recalculateRecipeCost(recipeId);
-
     return { lastInsertRowid: recipeId };
   }
 
   /**
-   * Actualiza una receta
+   * Updates recipe metadata/ingredients.
    */
   public updateRecipe(id: number, recipe: Partial<IRecipe>): boolean {
     const updates: string[] = [];
@@ -167,11 +183,9 @@ class RecipesModel {
 
     if (updates.length > 0) {
       values.push(id);
-      const query = `UPDATE recipes SET ${updates.join(", ")} WHERE id = ?`;
-      db.prepare(query).run(...values);
+      db.prepare(`UPDATE recipes SET ${updates.join(", ")} WHERE id = ?`).run(...values);
     }
 
-    // Actualizar ingredientes si se proporcionaron
     if (recipe.ingredients) {
       this.updateRecipeIngredients(id, recipe.ingredients);
       this.recalculateRecipeCost(id);
@@ -181,76 +195,105 @@ class RecipesModel {
   }
 
   /**
-   * Actualiza los ingredientes de una receta
+   * Replaces recipe ingredients.
    */
   private updateRecipeIngredients(recipeId: number, ingredients: IRecipeIngredient[]): void {
-    // Eliminar ingredientes existentes
     db.prepare("DELETE FROM recipe_ingredients WHERE recipe_id = ?").run(recipeId);
 
-    // Insertar nuevos ingredientes
-    const insertQuery = `
+    const insertStmt = db.prepare(
+      `
       INSERT INTO recipe_ingredients (recipe_id, raw_material_id, quantity, unit)
       VALUES (?, ?, ?, ?)
-    `;
-    const insertStmt = db.prepare(insertQuery);
+    `
+    );
 
     for (const ingredient of ingredients) {
-      insertStmt.run(
-        recipeId,
-        ingredient.raw_material_id,
-        ingredient.quantity,
-        ingredient.unit
-      );
+      insertStmt.run(recipeId, ingredient.raw_material_id, ingredient.quantity, ingredient.unit);
     }
   }
 
   /**
-   * Recalcula el costo de una receta basado en sus ingredientes
+   * Recalculates recipe cost using proper unit conversion between ingredient unit and purchase unit.
    */
   public recalculateRecipeCost(recipeId: number): number {
-    const recipe = this.getRecipeById(recipeId);
-    if (!recipe || !recipe.ingredients || recipe.ingredients.length === 0) {
+    const ingredients = db
+      .prepare(
+        `
+      SELECT
+        ri.quantity,
+        ri.unit,
+        rm.unit_cost,
+        rm.purchase_unit
+      FROM recipe_ingredients ri
+      JOIN raw_materials rm ON rm.id = ri.raw_material_id
+      WHERE ri.recipe_id = ?
+    `
+      )
+      .all(recipeId) as Array<{
+      quantity: number;
+      unit: string;
+      unit_cost: number;
+      purchase_unit: string;
+    }>;
+
+    if (ingredients.length === 0) {
       db.prepare("UPDATE recipes SET recipe_cost = 0 WHERE id = ?").run(recipeId);
       return 0;
     }
 
-    // Preparar ingredientes para el cálculo
-    const ingredientsForCalculation = recipe.ingredients.map(ing => ({
-      raw_material_id: ing.raw_material_id,
-      quantity: ing.quantity,
-      unit: ing.unit,
-      unit_cost: ing.unit_cost || 0
-    }));
+    let recipeCost = 0;
 
-    const recipeCost = calculateRecipeCost(ingredientsForCalculation);
+    for (const ing of ingredients) {
+      let quantityInPurchaseUnit = ing.quantity;
+      if (ing.unit !== ing.purchase_unit) {
+        const ingredientInBase = convertToBaseUnit(ing.quantity, ing.unit);
+        const purchaseUnitInBase = convertToBaseUnit(1, ing.purchase_unit);
+        quantityInPurchaseUnit = ingredientInBase / purchaseUnitInBase;
+      }
 
-    // Actualizar costo en la base de datos
-    db.prepare("UPDATE recipes SET recipe_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-      .run(recipeCost, recipeId);
+      recipeCost += quantityInPurchaseUnit * (ing.unit_cost || 0);
+    }
+
+    recipeCost = Math.round(recipeCost * 100) / 100;
+
+    const current = db.prepare("SELECT recipe_cost FROM recipes WHERE id = ?").get(recipeId) as
+      | { recipe_cost: number }
+      | undefined;
+    const currentCost = current?.recipe_cost ?? 0;
+    const changed = Math.abs(currentCost - recipeCost) > 0.009;
+
+    if (changed) {
+      db.prepare("UPDATE recipes SET recipe_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(
+        recipeCost,
+        recipeId
+      );
+    }
 
     return recipeCost;
   }
 
   /**
-   * Elimina (desactiva) una receta
+   * Soft-delete recipe.
    */
   public deleteRecipe(id: number): boolean {
-    const query = `UPDATE recipes SET active = 0 WHERE id = ?`;
-    const result = db.prepare(query).run(id);
+    const result = db.prepare("UPDATE recipes SET active = 0 WHERE id = ?").run(id);
     return result.changes > 0;
   }
 
   /**
-   * Obtiene recetas que usan una materia prima específica
+   * Finds recipes that use a raw material.
    */
   public getRecipesUsingRawMaterial(rawMaterialId: number): number[] {
-    const query = `
-      SELECT DISTINCT recipe_id 
-      FROM recipe_ingredients 
+    const results = db
+      .prepare(
+        `
+      SELECT DISTINCT recipe_id
+      FROM recipe_ingredients
       WHERE raw_material_id = ?
-    `;
-    const results = db.prepare(query).all(rawMaterialId) as { recipe_id: number }[];
-    return results.map(r => r.recipe_id);
+    `
+      )
+      .all(rawMaterialId) as { recipe_id: number }[];
+    return results.map((r) => r.recipe_id);
   }
 }
 

@@ -166,6 +166,36 @@ db.prepare(`
   )
 `).run();
 
+// Migration: link menu items with cost-engine recipes
+try {
+  const menuItemCols = db.prepare("PRAGMA table_info(menu_items)").all() as Array<{ name: string }>;
+  if (!menuItemCols.some(col => col.name === "recipe_id")) {
+    db.prepare("ALTER TABLE menu_items ADD COLUMN recipe_id INTEGER").run();
+    console.log("Added 'recipe_id' column to menu_items table");
+  }
+} catch (error) {
+  console.log("Migration note (menu_items.recipe_id):", error);
+}
+
+// Migration: normalize existing unit_cost values to purchase unit cost
+// (price / quantity in purchase_unit) to avoid legacy gr/ml costs shown as kg/l.
+try {
+  const updated = db.prepare(`
+    UPDATE raw_materials
+    SET
+      unit_cost = ROUND(purchase_price / purchase_quantity, 6),
+      last_price_update = CURRENT_TIMESTAMP
+    WHERE purchase_quantity > 0
+      AND ABS(unit_cost - (purchase_price / purchase_quantity)) > 0.000001
+  `).run();
+
+  if (updated.changes > 0) {
+    console.log(`Fixed unit_cost for ${updated.changes} raw materials`);
+  }
+} catch (error) {
+  console.log("Migration note (raw_materials unit_cost normalization):", error);
+}
+
 // Tabla de Recetas
 db.prepare(`
   CREATE TABLE IF NOT EXISTS recipes (

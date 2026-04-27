@@ -16,6 +16,7 @@ import SuppliersTab from "./components/suppliers-tab";
 import RecipesTab from "./components/recipes-tab";
 import ProductsTab from "./components/products-tab";
 import FixedCostsTab from "./components/fixed-costs-tab";
+import CatalogSyncPanel from "./components/catalog-sync-panel";
 
 const API_BASE = "http://localhost:3001/api/cost-engine";
 
@@ -121,6 +122,9 @@ function CostEnginePage() {
           Actualizar
         </Button>
       </div>
+
+      {/* KPI Cards */}
+      <CatalogSyncPanel />
 
       {/* KPI Cards */}
       {loading && counts.suppliers === 0 ? (

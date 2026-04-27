@@ -1,3 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,13 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
-
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 
 interface IMenuItem {
@@ -43,6 +44,24 @@ interface IMenuItem {
   updated_at?: string;
   category_id?: string | number;
   category_name?: string;
+  recipe_id?: number | null;
+  recipe_name?: string | null;
+}
+
+interface ICostRecipeIngredient {
+  id?: number;
+  raw_material_id: number;
+  raw_material_name?: string;
+  quantity: number;
+  unit: "kg" | "gr" | "l" | "ml" | "unidad";
+}
+
+interface ICostRecipe {
+  id: number;
+  name: string;
+  description?: string;
+  recipe_cost: number;
+  ingredients?: ICostRecipeIngredient[];
 }
 
 const formSchema = z.object({
@@ -76,11 +95,9 @@ export default function MenuItemForm({
   onSuccess,
 }: MenuItemFormProps) {
   const isEditing = !!item;
-
-  const [stockItems, setStockItems] = useState<any[]>([]);
-  const [recipeItems, setRecipeItems] = useState<{ id: number; name: string; quantity: number; unit: string }[]>([]);
-  const [selectedStockId, setSelectedStockId] = useState("");
-  const [selectedQuantity, setSelectedQuantity] = useState(0);
+  const [costRecipes, setCostRecipes] = useState<ICostRecipe[]>([]);
+  const [selectedRecipeId, setSelectedRecipeId] = useState("none");
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -96,35 +113,21 @@ export default function MenuItemForm({
   });
 
   useEffect(() => {
-    if (open) {
-      // Fetch available raw materials (ingredients)
-      fetch("http://localhost:3001/api/stock/raw-materials")
-        .then(res => res.json())
-        .then(data => setStockItems(data))
-        .catch(err => console.error("Error loading stock:", err));
-    }
+    if (!open) return;
 
-    if (open && item) {
-      // Fetch existing recipe
-      fetch(`http://localhost:3001/api/stock/menu-item-recipes/${item.id}`)
-        .then(res => res.json())
-        .then((data: any[]) => {
-          const mapped = data.map(d => ({
-            id: d.raw_material_id,
-            name: d.raw_material_name,
-            quantity: d.quantity,
-            unit: d.unit
-          }));
-          setRecipeItems(mapped);
-        })
-        .catch(err => console.error("Error loading recipe:", err));
-    } else {
-      setRecipeItems([]);
-    }
-  }, [open, item]);
+    fetch("http://localhost:3001/api/cost-engine/recipes")
+      .then((res) => res.json())
+      .then((data: ICostRecipe[]) => setCostRecipes(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error("Error loading cost recipes:", err);
+        setCostRecipes([]);
+      });
+  }, [open]);
 
   useEffect(() => {
-    if (item && open) {
+    if (!open) return;
+
+    if (item) {
       form.reset({
         name: item.name || "",
         slug: item.slug || "",
@@ -133,7 +136,8 @@ export default function MenuItemForm({
         category_id: item.category_id?.toString() || "",
         is_active: (item.is_active ?? 1) === 1,
       });
-    } else if (!item && open) {
+      setSelectedRecipeId(item.recipe_id ? String(item.recipe_id) : "none");
+    } else {
       form.reset({
         name: "",
         slug: "",
@@ -142,49 +146,20 @@ export default function MenuItemForm({
         category_id: "",
         is_active: true,
       });
+      setSelectedRecipeId("none");
     }
   }, [item, open, form]);
 
-  const handleAddIngredient = () => {
-    if (!selectedStockId || selectedQuantity <= 0) return;
-    const stockItem = stockItems.find(s => s.id === Number(selectedStockId));
-    if (!stockItem) return;
+  const selectedRecipe = useMemo(
+    () => costRecipes.find((recipe) => String(recipe.id) === selectedRecipeId),
+    [costRecipes, selectedRecipeId]
+  );
 
-    setRecipeItems(prev => {
-      const exists = prev.find(p => p.id === stockItem.id);
-      if (exists) {
-        return prev.map(p => p.id === stockItem.id ? { ...p, quantity: selectedQuantity } : p);
-      }
-      return [...prev, { id: stockItem.id, name: stockItem.name, quantity: selectedQuantity, unit: stockItem.purchase_unit }];
-    });
-    setSelectedStockId("");
-    setSelectedQuantity(0);
-  };
-
-  const handleRemoveIngredient = (id: number) => {
-    setRecipeItems(prev => prev.filter(p => p.id !== id));
-  };
-
-  const saveRecipe = async () => {
-    if (!item) return; // Only save recipe if item exists
-    try {
-      const ingredients = recipeItems.map(r => ({
-        raw_material_id: r.id,
-        quantity: r.quantity,
-        unit: r.unit
-      }));
-
-      await fetch(`http://localhost:3001/api/stock/menu-item-recipes/${item.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients })
-      });
-      toast.success("Receta actualizada");
-    } catch (e) {
-      console.error(e);
-      toast.error("Error al guardar la receta");
-    }
-  };
+  const filteredRecipes = useMemo(() => {
+    const term = recipeSearchTerm.trim().toLowerCase();
+    if (!term) return costRecipes;
+    return costRecipes.filter((recipe) => recipe.name.toLowerCase().includes(term));
+  }, [costRecipes, recipeSearchTerm]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -199,7 +174,10 @@ export default function MenuItemForm({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          recipe_id: selectedRecipeId === "none" ? null : Number(selectedRecipeId),
+        }),
       });
 
       if (!response.ok) {
@@ -207,25 +185,44 @@ export default function MenuItemForm({
         throw new Error(error.error || "Error al guardar el producto");
       }
 
-      // If creating new item, we might need the ID to save the recipe (if we wanted to do it in one go).
-      // But for now let's assume detail is saved first.
-
-      // If editing, save recipe as well
-      if (isEditing) {
-        await saveRecipe();
-      }
-
       toast.success(
         isEditing
           ? "Producto actualizado correctamente"
-          : "Producto creado correctamente",
+          : "Producto creado correctamente"
       );
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       console.error("Error saving item:", error);
       toast.error(
-        error instanceof Error ? error.message : "Error al guardar el producto",
+        error instanceof Error ? error.message : "Error al guardar el producto"
+      );
+    }
+  };
+
+  const saveRecipeLink = async () => {
+    if (!item) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/menu-items/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipe_id: selectedRecipeId === "none" ? null : Number(selectedRecipeId),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al vincular receta");
+      }
+
+      toast.success("Receta vinculada correctamente");
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error) {
+      console.error("Error linking recipe:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Error al vincular receta"
       );
     }
   };
@@ -242,7 +239,9 @@ export default function MenuItemForm({
         <Tabs defaultValue="details">
           <TabsList className="grid w-full grid-cols-2 bg-[#181c1f]">
             <TabsTrigger value="details">Detalles</TabsTrigger>
-            <TabsTrigger value="recipe" disabled={!isEditing}>Receta {(!isEditing) && "(Guardar primero)"}</TabsTrigger>
+            <TabsTrigger value="recipe" disabled={!isEditing}>
+              Receta {!isEditing && "(Guardar primero)"}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -303,8 +302,7 @@ export default function MenuItemForm({
                                 {field.value &&
                                   categories.find(
                                     (cat) =>
-                                      cat.category_id.toString() ===
-                                      field.value?.toString(),
+                                      cat.category_id.toString() === field.value?.toString()
                                   )?.name}
                               </SelectValue>
                             </SelectTrigger>
@@ -407,8 +405,8 @@ export default function MenuItemForm({
                     {form.formState.isSubmitting
                       ? "Guardando..."
                       : isEditing
-                        ? "Actualizar Producto"
-                        : "Crear Producto"}
+                      ? "Actualizar Producto"
+                      : "Crear Producto"}
                   </Button>
                 </div>
               </form>
@@ -416,51 +414,72 @@ export default function MenuItemForm({
           </TabsContent>
 
           <TabsContent value="recipe" className="space-y-4">
-            <div className="rounded-lg border border-[var(--card-border)] p-4 bg-[#181c1f]">
-              <h3 className="text-lg font-semibold mb-4 text-white">Ingredientes</h3>
-              <div className="flex gap-2 items-end mb-4">
-                <div className="flex-1">
-                  <Label className="text-white">Insumo</Label>
-                  <Select value={selectedStockId} onValueChange={setSelectedStockId}>
-                    <SelectTrigger className="mt-1 bg-[#0f1214] border-[var(--card-border)] text-white">
-                      <SelectValue placeholder="Seleccionar insumo" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#181c1f] border-[var(--card-border)] text-white h-[200px]">
-                      {stockItems.map(item => (
-                        <SelectItem key={item.id} value={item.id.toString()}>
-                          {item.name} ({item.purchase_unit})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-24">
-                  <Label className="text-white">Cantidad</Label>
-                  <Input
-                    type="number"
-                    className="mt-1 bg-[#0f1214] border-[var(--card-border)] text-white"
-                    value={selectedQuantity}
-                    onChange={e => setSelectedQuantity(parseFloat(e.target.value))}
-                  />
-                </div>
-                <Button onClick={handleAddIngredient} type="button" variant="secondary">Agregar</Button>
+            <div className="rounded-lg border border-[var(--card-border)] p-4 bg-[#181c1f] space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Vincular receta</h3>
+                <p className="text-sm text-gray-400">
+                  Selecciona una receta existente del módulo Motor de Costos.
+                </p>
               </div>
 
               <div className="space-y-2">
-                {recipeItems.length === 0 && <p className="text-gray-500 text-sm">No hay ingredientes definidos.</p>}
-                {recipeItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-2 rounded bg-[#0f1214] border border-[var(--card-border)]">
-                    <span className="text-sm font-medium text-white">{item.name}</span>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-400">{item.quantity} {item.unit}</span>
-                      <Button size="sm" variant="ghost" onClick={() => handleRemoveIngredient(item.id)} className="h-6 w-6 p-0 text-red-400 hover:text-red-300">
-                        &times;
-                      </Button>
+                <Label className="text-white">Receta</Label>
+                <Input
+                  placeholder="Buscar receta..."
+                  value={recipeSearchTerm}
+                  onChange={(e) => setRecipeSearchTerm(e.target.value)}
+                  className="bg-[#0f1214] border-[var(--card-border)] text-white placeholder:text-gray-500"
+                />
+                <Select value={selectedRecipeId} onValueChange={setSelectedRecipeId}>
+                  <SelectTrigger className="bg-[#0f1214] border-[var(--card-border)] text-white">
+                    <SelectValue placeholder="Seleccionar receta" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#181c1f] border-[var(--card-border)] text-white">
+                    <SelectItem value="none">Sin receta</SelectItem>
+                    {filteredRecipes.map((recipe) => (
+                      <SelectItem key={recipe.id} value={String(recipe.id)}>
+                        {recipe.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedRecipe ? (
+                <div className="rounded-lg border border-[var(--card-border)] bg-[#0f1214] p-3 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-white">{selectedRecipe.name}</p>
+                      {selectedRecipe.description && (
+                        <p className="text-sm text-gray-400">{selectedRecipe.description}</p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(selectedRecipe.ingredients || []).length === 0 ? (
+                      <span className="text-xs text-gray-500">Sin ingredientes definidos</span>
+                    ) : (
+                      selectedRecipe.ingredients?.map((ingredient) => (
+                        <Badge
+                          key={`${ingredient.raw_material_id}-${ingredient.quantity}-${ingredient.unit}`}
+                          variant="outline"
+                          className="text-[11px] border-[var(--card-border)]"
+                        >
+                          {ingredient.raw_material_name || `Insumo #${ingredient.raw_material_id}`} ({ingredient.quantity}
+                          {ingredient.unit})
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-[var(--card-border)] p-4 text-sm text-gray-400">
+                  Este producto no tiene receta vinculada.
+                </div>
+              )}
             </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
@@ -472,11 +491,7 @@ export default function MenuItemForm({
               </Button>
               <Button
                 type="button"
-                onClick={async () => {
-                  await saveRecipe();
-                  onOpenChange(false);
-                  onSuccess?.();
-                }}
+                onClick={saveRecipeLink}
                 className="bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90"
               >
                 Guardar Receta y Salir
@@ -488,4 +503,3 @@ export default function MenuItemForm({
     </Dialog>
   );
 }
-
