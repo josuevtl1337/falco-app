@@ -440,6 +440,93 @@ try {
   console.log("Migration note (service_payment_id):", error);
 }
 
+// ============================================
+// MÓDULO CUOTAS - Fixed monthly installments
+// ============================================
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS installments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    monthly_amount REAL NOT NULL DEFAULT 0,
+    due_day INTEGER NOT NULL DEFAULT 1 CHECK (due_day BETWEEN 1 AND 31),
+    total_months INTEGER NOT NULL CHECK (total_months > 0),
+    start_month INTEGER NOT NULL CHECK (start_month BETWEEN 1 AND 12),
+    start_year INTEGER NOT NULL,
+    category TEXT NOT NULL DEFAULT 'cuotas',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS installment_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    installment_id INTEGER NOT NULL REFERENCES installments(id) ON DELETE CASCADE,
+    month INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+    year INTEGER NOT NULL,
+    installment_number INTEGER NOT NULL,
+    amount_paid REAL NOT NULL,
+    payment_date TEXT NOT NULL,
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(installment_id, month, year)
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_installment_payments_installment ON installment_payments(installment_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_installment_payments_period ON installment_payments(month, year)`).run();
+
+try {
+  const cols = db.prepare("PRAGMA table_info(report_expenses)").all() as Array<{ name: string }>;
+  if (!cols.some(col => col.name === "installment_payment_id")) {
+    db.prepare("ALTER TABLE report_expenses ADD COLUMN installment_payment_id INTEGER REFERENCES installment_payments(id)").run();
+    console.log("✓ Added 'installment_payment_id' column to report_expenses table");
+  }
+} catch (error) {
+  console.log("Migration note (installment_payment_id):", error);
+}
+
+// Migration: allow generated installment expenses to be grouped as "cuotas".
+try {
+  const table = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'report_expenses'")
+    .get() as { sql?: string } | undefined;
+
+  if (table?.sql && !table.sql.includes("'cuotas'")) {
+    db.transaction(() => {
+      db.prepare("ALTER TABLE report_expenses RENAME TO report_expenses_old").run();
+      db.prepare(`
+        CREATE TABLE report_expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          amount REAL NOT NULL,
+          category TEXT NOT NULL CHECK (category IN ('servicios', 'proveedores', 'supermercado', 'empleados', 'personales', 'sueldos_falco', 'cuotas', 'otros')),
+          description TEXT DEFAULT '',
+          date TEXT NOT NULL,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          service_payment_id INTEGER REFERENCES service_payments(id),
+          installment_payment_id INTEGER REFERENCES installment_payments(id)
+        )
+      `).run();
+      db.prepare(`
+        INSERT INTO report_expenses (
+          id, amount, category, description, date, created_at, service_payment_id, installment_payment_id
+        )
+        SELECT
+          id, amount, category, description, date, created_at, service_payment_id, installment_payment_id
+        FROM report_expenses_old
+      `).run();
+      db.prepare("DROP TABLE report_expenses_old").run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_date ON report_expenses(date)`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_report_expenses_category ON report_expenses(category)`).run();
+    })();
+    console.log("✓ Updated report_expenses categories to include installments");
+  }
+} catch (error) {
+  console.log("Migration note (report_expenses categories):", error);
+}
+
 // Seed default services
 db.prepare(`
   INSERT OR IGNORE INTO services (name, monthly_amount, due_day, category, icon) VALUES

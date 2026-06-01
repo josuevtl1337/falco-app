@@ -6,9 +6,37 @@ export const BAKERY_PRODUCT_NAMES = [
   "Medialunas Saladas",
   "Croissant",
   "Pan de Chocolate",
-  "Pan de Ciabatta",
+  "Pan de Molde",
   "Roll de Canela",
+  "Scon de queso",
 ];
+
+const BAKERY_PRODUCT_ALIASES: Record<string, string[]> = {
+  "Pan de Molde": ["Pan de Molde", "Pan de Ciabatta", "Ciabatta Clasico"],
+  "Scon de queso": ["Scon de queso", "Scon de Queso"],
+};
+
+function normalizeBakeryStock(stock: Record<string, number>): Record<string, number> {
+  const normalized: Record<string, number> = {};
+  for (const name of BAKERY_PRODUCT_NAMES) {
+    const aliases = BAKERY_PRODUCT_ALIASES[name] || [name];
+    const matchedKey = aliases.find((alias) => stock[alias] !== undefined);
+    normalized[name] = matchedKey ? stock[matchedKey] : 0;
+  }
+  return normalized;
+}
+
+function getBakeryStockAliases(): string[] {
+  return BAKERY_PRODUCT_NAMES.flatMap((name) => BAKERY_PRODUCT_ALIASES[name] || [name]);
+}
+
+function getDisplayNameForBakeryStock(stockName: string): string {
+  for (const displayName of BAKERY_PRODUCT_NAMES) {
+    const aliases = BAKERY_PRODUCT_ALIASES[displayName] || [displayName];
+    if (aliases.includes(stockName)) return displayName;
+  }
+  return stockName;
+}
 
 export interface CashRegisterShift {
   id: number;
@@ -53,7 +81,12 @@ export const CashRegisterModel = {
       .get() as CashRegisterShift | undefined;
 
     if (!register) {
-      return { register: null, bakeryProducts: BAKERY_PRODUCT_NAMES };
+      return {
+        register: null,
+        bakeryProducts: BAKERY_PRODUCT_NAMES,
+        dailyClosedSales: 0,
+        dailyClosedOrderCount: 0,
+      };
     }
 
     // opened_at is already in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) via getLocalTimestamp
@@ -91,15 +124,26 @@ export const CashRegisterModel = {
       }
     }
 
+    const dailyClosed = db
+      .prepare(
+        `SELECT COALESCE(SUM(total_sales), 0) as total_sales,
+                COALESCE(SUM(order_count), 0) as order_count
+         FROM cash_register_shifts
+         WHERE date = ?
+           AND status = 'closed'
+           AND opened_at < ?`
+      )
+      .get(register.date, openedAtSqlite) as { total_sales: number; order_count: number };
+
     return {
       register: {
         ...register,
-        stock_start: JSON.parse(register.stock_start || "{}"),
+        stock_start: normalizeBakeryStock(JSON.parse(register.stock_start || "{}")),
         stock_system: register.stock_system
-          ? JSON.parse(register.stock_system)
+          ? normalizeBakeryStock(JSON.parse(register.stock_system))
           : null,
         stock_end_actual: register.stock_end_actual
-          ? JSON.parse(register.stock_end_actual)
+          ? normalizeBakeryStock(JSON.parse(register.stock_end_actual))
           : null,
         total_sales: salesResult.total_sales,
         order_count: salesResult.order_count,
@@ -108,6 +152,8 @@ export const CashRegisterModel = {
       // Estimated closing values: start minus sales by method
       estimatedCash: register.cash_start - cashSales,
       estimatedBank: register.bank_start - bankSales,
+      dailyClosedSales: dailyClosed.total_sales,
+      dailyClosedOrderCount: dailyClosed.order_count,
     };
   },
 
@@ -167,13 +213,11 @@ export const CashRegisterModel = {
       // Convert ISO opened_at to SQLite-compatible format
       const openedAtSqlite = register.opened_at.replace("T", " ").replace("Z", "").replace(/\.\d{3}/, "");
 
-      const stockStart = JSON.parse(register.stock_start || "{}") as Record<
-        string,
-        number
-      >;
+      const stockStart = normalizeBakeryStock(JSON.parse(register.stock_start || "{}"));
 
       // Calculate stock_system: stock_start - quantity sold during shift
-      const placeholders = BAKERY_PRODUCT_NAMES.map(() => "?").join(", ");
+      const stockAliases = getBakeryStockAliases();
+      const placeholders = stockAliases.map(() => "?").join(", ");
       const soldRows = db
         .prepare(
           `SELECT sp.name, COALESCE(SUM(oi.quantity), 0) as total_sold
@@ -186,12 +230,16 @@ export const CashRegisterModel = {
              AND sp.name IN (${placeholders})
            GROUP BY sp.name`
         )
-        .all(openedAtSqlite, ...BAKERY_PRODUCT_NAMES) as Array<{
+        .all(openedAtSqlite, ...stockAliases) as Array<{
         name: string;
         total_sold: number;
       }>;
 
-      const soldMap = new Map(soldRows.map((r) => [r.name, r.total_sold]));
+      const soldMap = new Map<string, number>();
+      for (const row of soldRows) {
+        const displayName = getDisplayNameForBakeryStock(row.name);
+        soldMap.set(displayName, (soldMap.get(displayName) || 0) + row.total_sold);
+      }
 
       const stockSystem: Record<string, number> = {};
       for (const name of BAKERY_PRODUCT_NAMES) {
@@ -245,8 +293,8 @@ export const CashRegisterModel = {
       return {
         ...updated,
         stock_start: JSON.parse(updated.stock_start || "{}"),
-        stock_system: JSON.parse(updated.stock_system || "{}"),
-        stock_end_actual: JSON.parse(updated.stock_end_actual || "{}"),
+        stock_system: normalizeBakeryStock(JSON.parse(updated.stock_system || "{}")),
+        stock_end_actual: normalizeBakeryStock(JSON.parse(updated.stock_end_actual || "{}")),
       };
     })();
   },
@@ -281,13 +329,11 @@ export const CashRegisterModel = {
     // opened_at is already in SQLite-compatible format (YYYY-MM-DD HH:MM:SS) via getLocalTimestamp
     const openedAtSqlite = register.opened_at;
 
-    const stockStart = JSON.parse(register.stock_start || "{}") as Record<
-      string,
-      number
-    >;
+    const stockStart = normalizeBakeryStock(JSON.parse(register.stock_start || "{}"));
 
     // Calculate how many bakery items were sold since the register opened
-    const placeholders = BAKERY_PRODUCT_NAMES.map(() => "?").join(", ");
+    const stockAliases = getBakeryStockAliases();
+    const placeholders = stockAliases.map(() => "?").join(", ");
     const soldRows = db
       .prepare(
         `SELECT sp.name, COALESCE(SUM(oi.quantity), 0) as total_sold
@@ -300,12 +346,16 @@ export const CashRegisterModel = {
            AND sp.name IN (${placeholders})
          GROUP BY sp.name`
       )
-      .all(openedAtSqlite, ...BAKERY_PRODUCT_NAMES) as Array<{
+      .all(openedAtSqlite, ...stockAliases) as Array<{
       name: string;
       total_sold: number;
     }>;
 
-    const soldMap = new Map(soldRows.map((r) => [r.name, r.total_sold]));
+    const soldMap = new Map<string, number>();
+    for (const row of soldRows) {
+      const displayName = getDisplayNameForBakeryStock(row.name);
+      soldMap.set(displayName, (soldMap.get(displayName) || 0) + row.total_sold);
+    }
 
     const stock: Record<string, number> = {};
     for (const name of BAKERY_PRODUCT_NAMES) {

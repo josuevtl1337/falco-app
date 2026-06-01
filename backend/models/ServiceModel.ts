@@ -99,7 +99,18 @@ export const ServiceModel = {
   },
 
   delete: (id: number) => {
-    return db.prepare(`DELETE FROM services WHERE id = ?`).run(id);
+    return db.transaction(() => {
+      db.prepare(
+        `DELETE FROM report_expenses
+         WHERE service_payment_id IN (
+           SELECT id FROM service_payments WHERE service_id = ?
+         )`
+      ).run(id);
+
+      db.prepare(`DELETE FROM service_payments WHERE service_id = ?`).run(id);
+
+      return db.prepare(`DELETE FROM services WHERE id = ?`).run(id);
+    })();
   },
 
   toggleActive: (id: number, active: number) => {

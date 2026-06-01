@@ -10,7 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BAKERY_PRODUCTS } from "../../types/cash-register";
+import {
+  BAKERY_PRODUCTS,
+  BAKERY_PRODUCT_STEPS,
+} from "../../types/cash-register";
 import type { CashRegisterShift, ClosingPayload } from "../../types/cash-register";
 import { toast } from "sonner";
 
@@ -33,6 +36,8 @@ interface SummaryData {
   stockSystem: Record<string, number>;
   totalSales: number;
   orderCount: number;
+  previousShiftSales: number;
+  previousShiftOrderCount: number;
 }
 
 const CASH_DIFF_THRESHOLD = 500;
@@ -124,6 +129,8 @@ export default function RegisterClosingDialog({
         stockSystem,
         totalSales: registerData?.total_sales ?? 0,
         orderCount: registerData?.order_count ?? 0,
+        previousShiftSales: statusData.dailyClosedSales ?? 0,
+        previousShiftOrderCount: statusData.dailyClosedOrderCount ?? 0,
       });
 
       setStep("summary");
@@ -189,6 +196,9 @@ export default function RegisterClosingDialog({
     const bankDiff = summaryData.bankEnd - register.bank_start;
 
     const formatDiff = (n: number) => (n >= 0 ? `+$${n.toLocaleString()}` : `-$${Math.abs(n).toLocaleString()}`);
+    const includeDailyTotal = register.shift === "afternoon";
+    const daySales = summaryData.previousShiftSales + summaryData.totalSales;
+    const dayOrderCount = summaryData.previousShiftOrderCount + summaryData.orderCount;
 
     let text = `CIERRE DE CAJA - ${register.date} - Turno ${shiftLabel}\n`;
     text += `================================\n\n`;
@@ -204,6 +214,11 @@ export default function RegisterClosingDialog({
 
     text += `\nTotal Ventas: $${summaryData.totalSales.toLocaleString()}\n`;
     text += `Comandas: ${summaryData.orderCount}\n`;
+    if (includeDailyTotal) {
+      text += `\nTOTAL DEL DIA: $${daySales.toLocaleString()}\n`;
+      text += `Comandas del dia: ${dayOrderCount}\n`;
+      text += `Maniana: $${summaryData.previousShiftSales.toLocaleString()} | Tarde: $${summaryData.totalSales.toLocaleString()}\n`;
+    }
     text += `================================`;
 
     return text;
@@ -298,7 +313,7 @@ export default function RegisterClosingDialog({
                       <Input
                         type="number"
                         min="0"
-                        step="1"
+                        step={BAKERY_PRODUCT_STEPS[name]}
                         placeholder="0"
                         value={stock[name]}
                         onChange={(e) =>
@@ -306,6 +321,9 @@ export default function RegisterClosingDialog({
                         }
                         className="bg-[#181c1f] border-[var(--card-border)] text-white h-9"
                       />
+                      {BAKERY_PRODUCT_STEPS[name] === 0.5 && (
+                        <p className="text-[11px] text-gray-500">Permite medio pan: 0.5</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -424,6 +442,23 @@ export default function RegisterClosingDialog({
                     {summaryData.orderCount}
                   </span>
                 </div>
+                {register.shift === "afternoon" && (
+                  <>
+                    <div className="border-t border-gray-800 my-2" />
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Total del dia</span>
+                      <span className="text-white font-semibold">
+                        ${(summaryData.previousShiftSales + summaryData.totalSales).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Maniana + tarde</span>
+                      <span className="text-gray-400">
+                        ${summaryData.previousShiftSales.toLocaleString()} + ${summaryData.totalSales.toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

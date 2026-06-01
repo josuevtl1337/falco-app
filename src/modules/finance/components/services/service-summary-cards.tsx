@@ -9,6 +9,8 @@ import type { ServiceMonthlySummary } from "../../types";
 interface ServiceSummaryCardsProps {
     summary: ServiceMonthlySummary | null;
     loading: boolean;
+    itemLabel?: string;
+    totalTitle?: string;
 }
 
 function formatCurrency(value: number): string {
@@ -22,6 +24,8 @@ function formatCurrency(value: number): string {
 export default function ServiceSummaryCards({
     summary,
     loading,
+    itemLabel = "servicios activos",
+    totalTitle = "Total Mensual",
 }: ServiceSummaryCardsProps) {
     if (loading) {
         return (
@@ -40,9 +44,9 @@ export default function ServiceSummaryCards({
 
     const cards = [
         {
-            title: "Total Mensual",
+            title: totalTitle,
             value: formatCurrency(summary?.totalExpected ?? 0),
-            subtitle: `${summary?.activeCount ?? 0} servicios activos`,
+            subtitle: `${summary?.activeCount ?? 0} ${itemLabel}`,
             icon: IconCurrencyDollar,
             iconColor: "text-blue-400",
             iconBg: "bg-blue-500/10",

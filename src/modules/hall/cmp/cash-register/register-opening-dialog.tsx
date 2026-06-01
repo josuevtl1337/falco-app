@@ -10,7 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BAKERY_PRODUCTS } from "../../types/cash-register";
+import {
+  BAKERY_PRODUCTS,
+  BAKERY_PRODUCT_STEPS,
+} from "../../types/cash-register";
 import type { OpeningPayload } from "../../types/cash-register";
 
 interface Props {
@@ -132,12 +135,15 @@ export default function RegisterOpeningDialog({
                   <Input
                     type="number"
                     min="0"
-                    step="1"
+                    step={BAKERY_PRODUCT_STEPS[name]}
                     placeholder="0"
                     value={stock[name]}
                     onChange={(e) => handleStockChange(name, e.target.value)}
                     className="bg-[#181c1f] border-[var(--card-border)] text-white h-9"
                   />
+                  {BAKERY_PRODUCT_STEPS[name] === 0.5 && (
+                    <p className="text-[11px] text-gray-500">Permite medio pan: 0.5</p>
+                  )}
                 </div>
               ))}
             </div>

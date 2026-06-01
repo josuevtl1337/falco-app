@@ -3,11 +3,22 @@ export const BAKERY_PRODUCTS = [
   "Medialunas Saladas",
   "Croissant",
   "Pan de Chocolate",
-  "Pan de Ciabatta",
+  "Pan de Molde",
   "Roll de Canela",
+  "Scon de queso",
 ] as const;
 
 export type BakeryProductName = (typeof BAKERY_PRODUCTS)[number];
+
+export const BAKERY_PRODUCT_STEPS: Record<BakeryProductName, number> = {
+  "Medialunas Dulces": 1,
+  "Medialunas Saladas": 1,
+  Croissant: 1,
+  "Pan de Chocolate": 1,
+  "Pan de Molde": 0.5,
+  "Roll de Canela": 1,
+  "Scon de queso": 1,
+};
 
 export interface CashRegisterShift {
   id: number;

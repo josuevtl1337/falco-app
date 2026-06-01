@@ -60,14 +60,53 @@ export type ExpenseCategory =
     | "servicios"
     | "proveedores"
     | "supermercado"
+    | "empleados"
+    | "personales"
+    | "sueldos_falco"
+    | "cuotas"
     | "otros";
 
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; emoji: string }[] = [
     { value: "servicios", label: "Servicios", emoji: "⚡" },
     { value: "proveedores", label: "Proveedores", emoji: "📦" },
     { value: "supermercado", label: "Supermercado", emoji: "🛒" },
+    { value: "personales", label: "Personales", emoji: "🏚️" },
+    { value: "empleados", label: "Empleados", emoji: "👨‍💼" },
+    { value: "sueldos_falco", label: "Sueldos internos", emoji: "☕" },
     { value: "otros", label: "Otros", emoji: "📝" },
+    { value: "cuotas", label: "Cuotas", emoji: "$" },
 ];
+
+export interface Installment {
+    id: number;
+    name: string;
+    monthly_amount: number;
+    due_day: number;
+    total_months: number;
+    start_month: number;
+    start_year: number;
+    category: string;
+    active: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface InstallmentWithStatus extends Installment {
+    installment_number: number;
+    payment_id: number | null;
+    amount_paid: number | null;
+    payment_date: string | null;
+    payment_notes: string | null;
+    status: PaymentStatus;
+}
+
+export interface InstallmentMonthlySummary {
+    activeCount: number;
+    totalExpected: number;
+    totalPaid: number;
+    paidCount: number;
+    pendingCount: number;
+}
 
 export interface AddExpensePayload {
     amount: number;

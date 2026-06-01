@@ -7,19 +7,26 @@ import ReportsTabContent from "./components/reports/reports-tab-content";
 import ExpensesTabContent from "./components/expenses/expenses-tab-content";
 import ServicesTabContent from "./components/services/services-tab-content";
 import { useMonthlyReport } from "./hooks/use-reports";
-import { useServiceSummary } from "./hooks/use-services";
+import { useInstallmentSummary, useServiceSummary } from "./hooks/use-services";
 
 function FinancePage() {
     const now = new Date();
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [year, setYear] = useState(now.getFullYear());
 
-    const { data: reportData, loading: reportLoading } = useMonthlyReport(month, year);
+    const {
+        data: reportData,
+        loading: reportLoading,
+        refetch: refetchReport,
+    } = useMonthlyReport(month, year);
     const {
         summary: serviceSummary,
         loading: summaryLoading,
         refetch: refetchSummary,
     } = useServiceSummary(month, year);
+    const { summary: installmentSummary } = useInstallmentSummary(month, year);
+    const servicePendingCount =
+        (serviceSummary?.pendingCount ?? 0) + (installmentSummary?.pendingCount ?? 0);
 
     return (
         <main className="p-6 space-y-6 min-h-screen">
@@ -50,12 +57,12 @@ function FinancePage() {
                     <TabsTrigger value="expenses">Gastos</TabsTrigger>
                     <TabsTrigger value="services" className="flex items-center gap-1.5">
                         Servicios
-                        {(serviceSummary?.pendingCount ?? 0) > 0 && (
+                        {servicePendingCount > 0 && (
                             <Badge
                                 variant="destructive"
                                 className="ml-1 text-[10px] px-1.5 py-0"
                             >
-                                {serviceSummary!.pendingCount}
+                                {servicePendingCount}
                             </Badge>
                         )}
                     </TabsTrigger>
@@ -81,6 +88,7 @@ function FinancePage() {
                         summary={serviceSummary}
                         summaryLoading={summaryLoading}
                         onSummaryRefresh={refetchSummary}
+                        onReportRefresh={refetchReport}
                     />
                 </TabsContent>
             </Tabs>

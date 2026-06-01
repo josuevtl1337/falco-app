@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { useServicePayments, useServices } from "../../hooks/use-services";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    useInstallmentPayments,
+    useServicePayments,
+    useServices,
+} from "../../hooks/use-services";
 import type { ServiceMonthlySummary, ServiceWithStatus } from "../../types";
 import ServiceSummaryCards from "./service-summary-cards";
 import ServiceList from "./service-list";
@@ -8,6 +13,7 @@ import AnnualSummaryTable from "./annual-summary-table";
 import PendingAlertBanner from "./pending-alert-banner";
 import AddServiceModal from "./add-service-modal";
 import RegisterPaymentModal from "./register-payment-modal";
+import InstallmentsTabContent from "./installments-tab-content";
 import { toast } from "sonner";
 
 interface ServicesTabContentProps {
@@ -16,6 +22,7 @@ interface ServicesTabContentProps {
     summary: ServiceMonthlySummary | null;
     summaryLoading: boolean;
     onSummaryRefresh: () => void;
+    onReportRefresh?: () => void;
 }
 
 export default function ServicesTabContent({
@@ -24,6 +31,7 @@ export default function ServicesTabContent({
     summary,
     summaryLoading,
     onSummaryRefresh,
+    onReportRefresh,
 }: ServicesTabContentProps) {
     const {
         services: servicePayments,
@@ -32,6 +40,10 @@ export default function ServicesTabContent({
         deletePayment,
         refetch: refetchPayments,
     } = useServicePayments(month, year);
+    const {
+        installments: installmentPayments,
+        refetch: refetchInstallmentPayments,
+    } = useInstallmentPayments(month, year);
 
     const {
         createService,
@@ -46,7 +58,9 @@ export default function ServicesTabContent({
 
     const refreshAll = () => {
         refetchPayments();
+        refetchInstallmentPayments();
         onSummaryRefresh();
+        onReportRefresh?.();
     };
 
     const handleCreateService = async (data: {
@@ -107,7 +121,7 @@ export default function ServicesTabContent({
         try {
             await addPayment(data);
             toast.success("Pago registrado correctamente");
-            onSummaryRefresh();
+            refreshAll();
         } catch {
             toast.error("Error al registrar pago");
         }
@@ -118,49 +132,69 @@ export default function ServicesTabContent({
         try {
             await deletePayment(paymentId);
             toast.success("Pago anulado");
-            onSummaryRefresh();
+            refreshAll();
         } catch {
             toast.error("Error al anular pago");
         }
     };
 
     return (
-        <div className="space-y-6">
-            {/* Alert banner */}
-            <PendingAlertBanner summary={summary} month={month} year={year} />
+        <div>
+            <Tabs defaultValue="fixed" className="w-full">
+                <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-900/70">
+                    <TabsTrigger value="fixed">Servicios Fijos</TabsTrigger>
+                    <TabsTrigger value="installments">Cuotas</TabsTrigger>
+                </TabsList>
 
-            {/* Summary cards */}
-            <ServiceSummaryCards summary={summary} loading={summaryLoading} />
+                <TabsContent value="fixed" className="mt-6 space-y-6">
+                    {/* Alert banner */}
+                    <PendingAlertBanner summary={summary} month={month} year={year} />
 
-            {/* Service list + Chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3">
-                    <ServiceList
-                        services={servicePayments}
-                        loading={paymentsLoading}
-                        onRegisterPayment={(s) => {
-                            setPayingService(s);
-                            setShowPaymentModal(true);
-                        }}
-                        onEdit={(s) => {
-                            setEditingService(s);
-                            setShowServiceModal(true);
-                        }}
-                        onDelete={handleDeleteService}
-                        onDeletePayment={handleDeletePayment}
-                        onAddNew={() => {
-                            setEditingService(null);
-                            setShowServiceModal(true);
-                        }}
+                    {/* Summary cards */}
+                    <ServiceSummaryCards summary={summary} loading={summaryLoading} />
+
+                    {/* Service list + Chart */}
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        <div className="lg:col-span-3">
+                            <ServiceList
+                                services={servicePayments}
+                                loading={paymentsLoading}
+                                onRegisterPayment={(s) => {
+                                    setPayingService(s);
+                                    setShowPaymentModal(true);
+                                }}
+                                onEdit={(s) => {
+                                    setEditingService(s);
+                                    setShowServiceModal(true);
+                                }}
+                                onDelete={handleDeleteService}
+                                onDeletePayment={handleDeletePayment}
+                                onAddNew={() => {
+                                    setEditingService(null);
+                                    setShowServiceModal(true);
+                                }}
+                            />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <ServiceChart
+                                services={servicePayments}
+                                installments={installmentPayments}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Annual summary */}
+                    <AnnualSummaryTable year={year} />
+                </TabsContent>
+
+                <TabsContent value="installments" className="mt-6">
+                    <InstallmentsTabContent
+                        month={month}
+                        year={year}
+                        onReportRefresh={onReportRefresh}
                     />
-                </div>
-                <div className="lg:col-span-2">
-                    <ServiceChart services={servicePayments} />
-                </div>
-            </div>
-
-            {/* Annual summary */}
-            <AnnualSummaryTable year={year} />
+                </TabsContent>
+            </Tabs>
 
             {/* Modals */}
             <AddServiceModal

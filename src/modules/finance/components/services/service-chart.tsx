@@ -7,27 +7,27 @@ import {
     Tooltip,
     Legend,
 } from "recharts";
-import type { ServiceWithStatus } from "../../types";
-import { SERVICE_CATEGORIES } from "../../types";
+import type { InstallmentWithStatus, ServiceWithStatus } from "../../types";
 
 interface ServiceChartProps {
     services: ServiceWithStatus[];
+    installments?: InstallmentWithStatus[];
 }
 
 const COLORS = [
-    "#3b82f6", // blue
-    "#ef4444", // red
-    "#10b981", // emerald
-    "#f59e0b", // amber
-    "#8b5cf6", // violet
-    "#ec4899", // pink
-    "#06b6d4", // cyan
-    "#f97316", // orange
+    "#3b82f6",
+    "#ef4444",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ec4899",
+    "#06b6d4",
+    "#f97316",
+    "#14b8a6",
+    "#eab308",
+    "#a855f7",
+    "#fb7185",
 ];
-
-function getCategoryLabel(category: string): string {
-    return SERVICE_CATEGORIES.find((c) => c.value === category)?.label || category;
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
@@ -39,38 +39,43 @@ function CustomTooltip({ active, payload }: any) {
             <p className="text-xs text-slate-400 mt-1">
                 ${data.value?.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
             </p>
+            {data.payload?.detail && (
+                <p className="text-[11px] text-slate-500 mt-1">{data.payload.detail}</p>
+            )}
         </div>
     );
 }
 
-export default function ServiceChart({ services }: ServiceChartProps) {
-    // Aggregate by category
-    const categoryMap = new Map<string, number>();
-    for (const s of services) {
-        const current = categoryMap.get(s.category) || 0;
-        categoryMap.set(s.category, current + s.monthly_amount);
-    }
-
-    const chartData = Array.from(categoryMap.entries())
-        .filter(([, value]) => value > 0)
-        .map(([category, value]) => ({
-            name: getCategoryLabel(category),
-            value,
-        }));
+export default function ServiceChart({
+    services,
+    installments = [],
+}: ServiceChartProps) {
+    const chartData = [
+        ...services.map((service) => ({
+            name: service.name,
+            value: service.monthly_amount,
+            detail: "Servicio fijo",
+        })),
+        ...installments.map((installment) => ({
+            name: installment.name,
+            value: installment.monthly_amount,
+            detail: `Cuota ${installment.installment_number}/${installment.total_months}`,
+        })),
+    ].filter((item) => item.value > 0);
 
     if (chartData.length === 0) {
         return (
             <Card className="border-slate-800 bg-slate-950/50">
                 <CardHeader>
                     <CardTitle className="text-lg text-slate-200">
-                        Distribución por Categoría
+                        Distribucion mensual
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="h-[250px] flex flex-col items-center justify-center gap-2">
-                        <span className="text-4xl">📊</span>
+                        <span className="text-4xl">$</span>
                         <p className="text-slate-500 text-sm">
-                            Configurá los montos de los servicios
+                            Configura servicios o cuotas con monto mensual
                         </p>
                     </div>
                 </CardContent>
@@ -82,7 +87,7 @@ export default function ServiceChart({ services }: ServiceChartProps) {
         <Card className="border-slate-800 bg-slate-950/50">
             <CardHeader>
                 <CardTitle className="text-lg text-slate-200">
-                    Distribución por Categoría
+                    Distribucion mensual
                 </CardTitle>
             </CardHeader>
             <CardContent>

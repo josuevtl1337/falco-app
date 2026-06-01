@@ -1,5 +1,6 @@
 import { Router } from "express";
 import ServiceController from "../controllers/ServiceController.ts";
+import InstallmentController from "../controllers/InstallmentController.ts";
 
 const ServiceRouter = Router();
 
@@ -22,5 +23,15 @@ ServiceRouter.delete("/services-payments/:id", ServiceController.deletePayment);
 // Summaries
 ServiceRouter.get("/services-summary", ServiceController.getMonthlySummary);
 ServiceRouter.get("/services-annual-summary", ServiceController.getAnnualSummary);
+
+// Installment expenses
+ServiceRouter.get("/installments", InstallmentController.getAll);
+ServiceRouter.post("/installments", InstallmentController.create);
+ServiceRouter.put("/installments/:id", InstallmentController.update);
+ServiceRouter.delete("/installments/:id", InstallmentController.delete);
+ServiceRouter.get("/installments-payments", InstallmentController.getPaymentsForMonth);
+ServiceRouter.post("/installments-payments", InstallmentController.addPayment);
+ServiceRouter.delete("/installments-payments/:id", InstallmentController.deletePayment);
+ServiceRouter.get("/installments-summary", InstallmentController.getMonthlySummary);
 
 export default ServiceRouter;
