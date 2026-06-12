@@ -5,6 +5,7 @@ import type {
   LowStockAlert,
   MenuItem,
   StockMenuItemMap,
+  VitrineStockItem,
 } from "../types";
 
 const STOCK_API = "http://localhost:3001/api/stock";
@@ -137,4 +138,32 @@ export function useStockMovements(stockProductId?: number) {
   }, [fetchMovements]);
 
   return { movements, loading, refetch: fetchMovements };
+}
+
+
+export function useVitrineStockItems() {
+  const [items, setItems] = useState<VitrineStockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${STOCK_API}/vitrine-items`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setItems(await res.json());
+    } catch (err: any) {
+      setError(err.message);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  return { items, loading, error, refetch: fetchItems };
 }

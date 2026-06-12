@@ -9,10 +9,12 @@ import {
   IconHistory,
   IconRefresh,
   IconBoxSeam,
+  IconBasket,
 } from "@tabler/icons-react";
 import StockProductsTab from "./components/stock-products-tab";
 import StockAlertsTab from "./components/stock-alerts-tab";
 import StockHistoryTab from "./components/stock-history-tab";
+import VitrineStockTab from "./components/vitrine-stock-tab";
 import { useLowStockAlerts, useStockProducts } from "./hooks/use-stock";
 
 function StockPage() {
@@ -134,10 +136,14 @@ function StockPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="products" className="gap-1.5">
             <IconPackage size={16} />
             Productos
+          </TabsTrigger>
+          <TabsTrigger value="vitrine" className="gap-1.5">
+            <IconBasket size={16} />
+            Stock de Vitrina
           </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <IconAlertTriangle size={16} />
@@ -156,6 +162,10 @@ function StockPage() {
 
         <TabsContent value="products" className="mt-6">
           <StockProductsTab />
+        </TabsContent>
+
+        <TabsContent value="vitrine" className="mt-6">
+          <VitrineStockTab />
         </TabsContent>
 
         <TabsContent value="alerts" className="mt-6">

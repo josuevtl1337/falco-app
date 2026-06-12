@@ -1,9 +1,10 @@
-import type { Order } from "./OrderModel";
+import type { PrinterModule } from "@ssxv/node-printer";
+import type { Order } from "./OrderModel.ts";
 
 export class PrintModel {
   async printOrder(payload: Order): Promise<void> {
     const mod = await import("@ssxv/node-printer");
-    const printerLib = mod.default ?? mod;
+    const printerLib = (mod.default ?? mod) as PrinterModule;
 
     const data = buildTicket(payload);
 

@@ -3,12 +3,14 @@ import type {
   CashRegisterShift,
   OpeningPayload,
   ClosingPayload,
+  VitrineStockItem,
 } from "../types/cash-register";
 
 interface CashRegisterState {
   isOpen: boolean;
   register: CashRegisterShift | null;
   bakeryProducts: string[];
+  vitrineStockItems: VitrineStockItem[];
   loading: boolean;
   estimatedCash: number;
   estimatedBank: number;
@@ -19,6 +21,7 @@ export function useCashRegister() {
     isOpen: false,
     register: null,
     bakeryProducts: [],
+    vitrineStockItems: [],
     loading: true,
     estimatedCash: 0,
     estimatedBank: 0,
@@ -33,6 +36,7 @@ export function useCashRegister() {
         isOpen: data.register !== null,
         register: data.register,
         bakeryProducts: data.bakeryProducts,
+        vitrineStockItems: data.vitrineStockItems ?? [],
         loading: false,
         estimatedCash: data.estimatedCash ?? 0,
         estimatedBank: data.estimatedBank ?? 0,

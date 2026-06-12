@@ -1,14 +1,17 @@
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import PaymentSection, { PaymentData } from "./checkout/payment-section";
+import PaymentSection, {
+  PaymentData,
+  PaymentSummary,
+} from "./checkout/payment-section";
 import { formatARS } from "@/modules/commons/utils/helpers";
 import type { OrderStateData } from "..";
 
 interface CheckoutSheetContentProps {
   currentOrder: OrderStateData;
   onConfirm: (paymentData: PaymentData) => Promise<void>;
-  onPrint: (paymentData?: PaymentData) => void;
+  onPrint: (paymentData?: PaymentSummary) => void;
 }
 
 function CheckoutSheetContent({
@@ -16,9 +19,9 @@ function CheckoutSheetContent({
   onConfirm,
   onPrint,
 }: CheckoutSheetContentProps) {
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [paymentData, setPaymentData] = useState<PaymentSummary | null>(null);
 
-  const handlePaymentChange = useCallback((d: PaymentData) => {
+  const handlePaymentChange = useCallback((d: PaymentSummary) => {
     setPaymentData(d);
   }, []);
 
@@ -68,15 +71,17 @@ function CheckoutSheetContent({
       <div className="p-4 pb-8 border-t border-[var(--card-border)] flex gap-2">
         <Button
           onClick={() => onPrint(paymentData ?? undefined)}
-          disabled={!paymentData}
           variant="outline"
           className="flex-1 py-2 rounded-lg text-sm font-semibold border-[var(--card-border)] text-gray-300"
         >
           Imprimir ticket
         </Button>
         <Button
-          onClick={() => paymentData && onConfirm(paymentData)}
-          disabled={!paymentData}
+          onClick={() =>
+            paymentData?.paymentMethod &&
+            onConfirm(paymentData as PaymentData)
+          }
+          disabled={!paymentData?.paymentMethod}
           className="flex-1 py-2 rounded-lg bg-[var(--primary)] text-sm font-semibold cursor-pointer"
         >
           Confirmar pago

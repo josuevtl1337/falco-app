@@ -23,6 +23,7 @@ interface OrderCartProps {
   onPrint: () => void;
   isReadyToPay: boolean;
   isRegisterOpen: boolean;
+  showEditButton: boolean;
 }
 
 function OrderCart({
@@ -37,6 +38,7 @@ function OrderCart({
   onPrint,
   isReadyToPay,
   isRegisterOpen,
+  showEditButton,
 }: OrderCartProps) {
   const subtotal = items.reduce((acc, p) => acc + p.price * p.qty, 0);
 
@@ -66,7 +68,21 @@ function OrderCart({
           <p className="text-sm text-gray-500 text-center">
             Agrega productos al pedido
           </p>
+          {showEditButton && (
+            <p className="text-xs text-gray-400 text-center max-w-[220px]">
+              La comanda quedó sin productos. Confirmá el cambio para liberar la mesa.
+            </p>
+          )}
         </div>
+        {showEditButton && (
+          <Button
+            variant="destructive"
+            onClick={onSave}
+            className="w-full py-2 rounded-lg text-sm font-semibold"
+          >
+            Eliminar comanda
+          </Button>
+        )}
       </div>
     );
   }
@@ -159,14 +175,16 @@ function OrderCart({
         )}
 
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            disabled={items.length === 0}
-            onClick={onSave}
-            className="flex-1 py-2 rounded-lg bg-gray-700 text-white text-sm font-semibold hover:bg-gray-600"
-          >
-            Guardar
-          </Button>
+          {showEditButton && (
+            <Button
+              variant="secondary"
+              disabled={items.length === 0}
+              onClick={onSave}
+              className="flex-1 py-2 rounded-lg bg-gray-700 text-white text-sm font-semibold hover:bg-gray-600"
+            >
+              Editar
+            </Button>
+          )}
           {isReadyToPay ? (
             <Button
               onClick={onPay}

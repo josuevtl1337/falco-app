@@ -80,7 +80,10 @@ export function useServices() {
 
     const deleteService = async (id: number) => {
         const res = await fetch(`${API}/services/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Error al eliminar servicio");
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Error al eliminar servicio");
+        }
         await fetchServices();
     };
 

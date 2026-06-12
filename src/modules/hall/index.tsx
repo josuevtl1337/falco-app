@@ -1,10 +1,13 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { IMenuItem as IProduct } from "backend/models/MenuModel";
 import { toast } from "sonner";
 import { ShiftContext } from "@/App";
 import { useCashRegister } from "./hooks/useCashRegister";
 import { useMenuData } from "./hooks/useMenuData";
-import { PaymentData } from "./cmp/checkout/payment-section";
+import {
+  PaymentData,
+  PaymentSummary,
+} from "./cmp/checkout/payment-section";
 import CompactHallPanel from "./cmp/compact-hall-panel";
 import PosMenuGrid from "./cmp/pos-menu-grid";
 import OrderCart from "./cmp/order-cart";
@@ -39,6 +42,19 @@ export interface OrderProduct extends IProduct {
   qty: number;
 }
 
+const normalizeOrderItems = (items: OrderStateData["items"]) =>
+  items
+    .map((item) => ({
+      menu_item_id: String(item.menu_item_id),
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      subtotal: Number(item.subtotal),
+    }))
+    .sort((a, b) => a.menu_item_id.localeCompare(b.menu_item_id));
+
+const orderItemsSignature = (items: OrderStateData["items"]) =>
+  JSON.stringify(normalizeOrderItems(items));
+
 function OrdersPage() {
   const [seat, setSeat] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -59,13 +75,15 @@ function OrdersPage() {
     openRegister,
     closeRegister,
     fetchBakeryStock,
+    fetchStatus,
     estimatedCash,
     estimatedBank,
+    vitrineStockItems,
   } = useCashRegister();
   const [showOpeningDialog, setShowOpeningDialog] = useState(false);
   const [showClosingDialog, setShowClosingDialog] = useState(false);
 
-  const handleRegisterClick = useCallback(() => {
+  const handleRegisterClick = useCallback(async () => {
     if (isRegisterOpen) {
       if (orders.length > 0) {
         toast.error(
@@ -73,11 +91,12 @@ function OrdersPage() {
         );
         return;
       }
+      await fetchStatus();
       setShowClosingDialog(true);
     } else {
       setShowOpeningDialog(true);
     }
-  }, [isRegisterOpen, orders]);
+  }, [fetchStatus, isRegisterOpen, orders]);
 
   const handleOpenRegister = useCallback(
     async (data: Parameters<typeof openRegister>[0]) => {
@@ -287,6 +306,37 @@ function OrdersPage() {
 
   const onEditCommand = useCallback(async () => {
     if (!currentOrder) return;
+
+    if (currentOrder.items.length === 0) {
+      const body = {
+        ...currentOrder,
+        status: "cancelled",
+        discount_percentage: 0,
+        total_amount: 0,
+      };
+
+      try {
+        const res = await fetch(
+          `http://localhost:3001/api/orders/${currentOrder.id}/status`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+        );
+        if (!res.ok) throw new Error("Network response was not ok");
+        toast.success("Se ha eliminado la comanda");
+        setOrders((prev) =>
+          prev.filter((order) => String(order.id) !== String(currentOrder.id)),
+        );
+        setCurrentOrder(null);
+        await getAllOrders();
+      } catch (err) {
+        console.error("Error cancelling order:", err);
+      }
+      return;
+    }
+
     const body = {
       ...currentOrder,
       total_amount: computeSubtotal(currentOrder.items),
@@ -316,7 +366,7 @@ function OrdersPage() {
   }, [currentOrder]);
 
   const onPrint = useCallback(
-    async (paymentData?: PaymentData) => {
+    async (paymentData?: PaymentSummary) => {
       if (!currentOrder) return;
 
       let body: Record<string, unknown> = {
@@ -332,9 +382,10 @@ function OrdersPage() {
 
       if (paymentData) {
         body = {
-          ...currentOrder,
-          status: "paid",
-          payment_method_id: paymentData.paymentMethod.id,
+          ...body,
+          ...(paymentData.paymentMethod
+            ? { payment_method_id: paymentData.paymentMethod.id }
+            : {}),
           discount_percentage: paymentData.discount_percentage,
           total_amount: paymentData.total_amount,
         };
@@ -388,6 +439,22 @@ function OrdersPage() {
     }
   }, [checkoutOpen, pendingClose]);
 
+  const persistedCurrentOrder = useMemo(() => {
+    if (!currentOrder?.id) return null;
+    return (
+      orders.find((order) => String(order.id) === String(currentOrder.id)) ??
+      null
+    );
+  }, [currentOrder?.id, orders]);
+
+  const hasCurrentOrderChanges = useMemo(() => {
+    if (!currentOrder?.id || !persistedCurrentOrder) return false;
+    return (
+      orderItemsSignature(currentOrder.items) !==
+      orderItemsSignature(persistedCurrentOrder.items)
+    );
+  }, [currentOrder, persistedCurrentOrder]);
+
   // Map current order items to cart format
   const cartItems = currentOrder
     ? currentOrder.items.map((item) => ({
@@ -435,6 +502,7 @@ function OrdersPage() {
           onPrint={() => onPrint()}
           isReadyToPay={currentOrder?.status === "open" || false}
           isRegisterOpen={isRegisterOpen}
+          showEditButton={hasCurrentOrderChanges}
         />
       </div>
 
@@ -468,6 +536,7 @@ function OrdersPage() {
         onOpenChange={setShowOpeningDialog}
         shift={shift}
         onSubmit={handleOpenRegister}
+        vitrineStockItems={vitrineStockItems}
       />
       <RegisterClosingDialog
         open={showClosingDialog}
@@ -477,6 +546,7 @@ function OrdersPage() {
         fetchBakeryStock={fetchBakeryStock}
         estimatedCash={estimatedCash}
         estimatedBank={estimatedBank}
+        vitrineStockItems={vitrineStockItems}
       />
     </div>
   );

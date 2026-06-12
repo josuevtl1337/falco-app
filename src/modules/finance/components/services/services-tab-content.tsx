@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     useInstallmentPayments,
     useServicePayments,
@@ -15,6 +24,10 @@ import AddServiceModal from "./add-service-modal";
 import RegisterPaymentModal from "./register-payment-modal";
 import InstallmentsTabContent from "./installments-tab-content";
 import { toast } from "sonner";
+
+type ConfirmAction =
+    | { type: "delete-service"; service: ServiceWithStatus }
+    | null;
 
 interface ServicesTabContentProps {
     month: number;
@@ -37,7 +50,6 @@ export default function ServicesTabContent({
         services: servicePayments,
         loading: paymentsLoading,
         addPayment,
-        deletePayment,
         refetch: refetchPayments,
     } = useServicePayments(month, year);
     const {
@@ -55,6 +67,8 @@ export default function ServicesTabContent({
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [editingService, setEditingService] = useState<ServiceWithStatus | null>(null);
     const [payingService, setPayingService] = useState<ServiceWithStatus | null>(null);
+    const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
 
     const refreshAll = () => {
         refetchPayments();
@@ -99,15 +113,8 @@ export default function ServicesTabContent({
         }
     };
 
-    const handleDeleteService = async (service: ServiceWithStatus) => {
-        if (!window.confirm(`¿Eliminar el servicio "${service.name}"?`)) return;
-        try {
-            await deleteService(service.id);
-            toast.success("Servicio eliminado");
-            refreshAll();
-        } catch {
-            toast.error("Error al eliminar servicio");
-        }
+    const handleDeleteService = (service: ServiceWithStatus) => {
+        setConfirmAction({ type: "delete-service", service });
     };
 
     const handleRegisterPayment = async (data: {
@@ -127,15 +134,28 @@ export default function ServicesTabContent({
         }
     };
 
-    const handleDeletePayment = async (paymentId: number) => {
-        if (!window.confirm("¿Anular este pago?")) return;
+    const handleConfirmAction = async () => {
+        if (!confirmAction) return;
+
+        setConfirmLoading(true);
         try {
-            await deletePayment(paymentId);
-            toast.success("Pago anulado");
+            await deleteService(confirmAction.service.id);
+            toast.success("Servicio anulado");
+            setConfirmAction(null);
             refreshAll();
-        } catch {
-            toast.error("Error al anular pago");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Error al anular servicio");
+        } finally {
+            setConfirmLoading(false);
         }
+    };
+
+    const confirmCopy = {
+        title: "Anular servicio",
+        description: confirmAction
+            ? `El servicio "${confirmAction.service.name}" se va a ocultar de Servicios Fijos. Los pagos históricos quedan guardados para no romper reportes anteriores.`
+            : "",
+        confirmLabel: "Anular servicio",
     };
 
     return (
@@ -168,7 +188,6 @@ export default function ServicesTabContent({
                                     setShowServiceModal(true);
                                 }}
                                 onDelete={handleDeleteService}
-                                onDeletePayment={handleDeletePayment}
                                 onAddNew={() => {
                                     setEditingService(null);
                                     setShowServiceModal(true);
@@ -215,6 +234,42 @@ export default function ServicesTabContent({
                 year={year}
                 onSubmit={handleRegisterPayment}
             />
+
+            <Dialog
+                open={confirmAction !== null}
+                onOpenChange={(open) => {
+                    if (!open && !confirmLoading) setConfirmAction(null);
+                }}
+            >
+                <DialogContent className="border-slate-800 bg-slate-950 text-slate-100">
+                    <DialogHeader>
+                        <DialogTitle>{confirmCopy.title}</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            {confirmCopy.description}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfirmAction(null)}
+                            disabled={confirmLoading}
+                            className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleConfirmAction}
+                            disabled={confirmLoading}
+                            className="bg-red-600 text-white hover:bg-red-500"
+                        >
+                            {confirmLoading ? "Procesando..." : confirmCopy.confirmLabel}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

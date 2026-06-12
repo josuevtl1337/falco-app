@@ -1,24 +1,23 @@
-export const BAKERY_PRODUCTS = [
-  "Medialunas Dulces",
-  "Medialunas Saladas",
-  "Croissant",
-  "Pan de Chocolate",
-  "Pan de Molde",
-  "Roll de Canela",
-  "Scon de queso",
-] as const;
+export interface VitrineStockMenuItemMap {
+  id: number;
+  vitrine_stock_item_id: number;
+  menu_item_id: number;
+  menu_item_name?: string;
+  quantity_per_item: number;
+}
 
-export type BakeryProductName = (typeof BAKERY_PRODUCTS)[number];
-
-export const BAKERY_PRODUCT_STEPS: Record<BakeryProductName, number> = {
-  "Medialunas Dulces": 1,
-  "Medialunas Saladas": 1,
-  Croissant: 1,
-  "Pan de Chocolate": 1,
-  "Pan de Molde": 0.5,
-  "Roll de Canela": 1,
-  "Scon de queso": 1,
-};
+export interface VitrineStockItem {
+  id: number;
+  label: string;
+  unit_step: number;
+  show_on_open: number;
+  show_on_close: number;
+  active: number;
+  sort_order: number;
+  mappings?: VitrineStockMenuItemMap[];
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface CashRegisterShift {
   id: number;

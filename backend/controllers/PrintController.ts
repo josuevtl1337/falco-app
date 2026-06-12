@@ -1,5 +1,6 @@
 import type { Response, Request } from "express";
-import { PrintModel } from "../models/PrintModel";
+import type { PrinterModule } from "@ssxv/node-printer";
+import { PrintModel } from "../models/PrintModel.ts";
 
 const printService = new PrintModel();
 
@@ -25,7 +26,7 @@ export class PrintController {
 
   static async listPrinters(req: Request, res: Response) {
     const mod = await import("@ssxv/node-printer");
-    const printer = mod.default ?? mod;
+    const printer = (mod.default ?? mod) as PrinterModule;
 
     const printers = await printer.getPrinters();
     return res.json(printers);

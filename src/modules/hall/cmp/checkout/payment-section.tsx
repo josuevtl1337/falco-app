@@ -11,18 +11,24 @@ export interface IPaymentMethod {
   created_at: string;
 }
 
-export interface PaymentData {
-  paymentMethod: IPaymentMethod;
+export interface PaymentSummary {
+  paymentMethod?: IPaymentMethod;
   discount_percentage: number;
   total_amount: number;
 }
+
+export interface PaymentData extends PaymentSummary {
+  paymentMethod: IPaymentMethod;
+}
+
+const AVAILABLE_DISCOUNTS = [10, 15, 100];
 
 export function PaymentSection({
   subtotal,
   onChange,
 }: {
   subtotal: number;
-  onChange?: (data: PaymentData) => void;
+  onChange?: (data: PaymentSummary) => void;
 }) {
   const [paymentMethods, setPaymentMethods] = useState<IPaymentMethod[] | []>(
     []
@@ -31,15 +37,13 @@ export function PaymentSection({
     useState<IPaymentMethod | null>(null);
   const [cashPaid, setCashPaid] = useState<number | null>(null);
   const [showDiscount, setshowDiscount] = useState<boolean>(false);
-
   const [discountValue, setDiscountValue] = useState<number>(0);
-  const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
 
   const computedDiscount = useMemo(() => {
-    return Math.round((subtotal * (discountValue || 0)) / 100);
+    return Math.round((subtotal * discountValue) / 100);
   }, [discountValue, subtotal]);
 
-  const totalAfterDiscount = Math.max(0, subtotal - appliedDiscount);
+  const totalAfterDiscount = Math.max(0, subtotal - computedDiscount);
 
   // change now puede ser negativo (falta) o positivo (vuelto)
   const change =
@@ -66,9 +70,9 @@ export function PaymentSection({
   }, []);
 
   useEffect(() => {
-    if (onChange && selectedPaymentMethod) {
+    if (onChange) {
       onChange({
-        paymentMethod: selectedPaymentMethod,
+        paymentMethod: selectedPaymentMethod ?? undefined,
         discount_percentage: discountValue,
         total_amount: totalAfterDiscount,
       });
@@ -197,30 +201,23 @@ export function PaymentSection({
 
       {showDiscount ? (
         <>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={discountValue}
-              onChange={(e) => setDiscountValue(Number(e.target.value || 0))}
-              className="flex-1 px-3 py-2 rounded-lg bg-[#18181b] border border-[var(--card-border)] text-white text-sm"
-              placeholder={"0%"}
-            />
+          <div className="grid grid-cols-4 gap-2">
+            {AVAILABLE_DISCOUNTS.map((discount) => (
+              <Button
+                key={discount}
+                type="button"
+                variant={discountValue === discount ? "default" : "outline"}
+                onClick={() => setDiscountValue(discount)}
+                className="cursor-pointer px-3 py-2 rounded-lg font-semibold"
+              >
+                {discount}%
+              </Button>
+            ))}
 
             <Button
               type="button"
-              onClick={() => setAppliedDiscount(computedDiscount)}
-              className="cursor-pointer px-3 py-2 rounded-lg border-1 font-semibold"
-            >
-              Aplicar
-            </Button>
-
-            <Button
-              type="button"
-              variant={"outline"}
+              variant="outline"
               onClick={() => {
-                setAppliedDiscount(0);
                 setDiscountValue(0);
                 setshowDiscount(false);
               }}
@@ -231,14 +228,12 @@ export function PaymentSection({
           </div>
 
           <div className="text-xs text-gray-500 mt-2">
-            Calculado:{" "}
-            <span className="text-white font-medium">
-              ${computedDiscount.toLocaleString()}
-            </span>
+            Descuento seleccionado: {" "}
+            <span className="text-white font-medium">{discountValue}%</span>
             {" • "}
-            Total con descuento:{" "}
+            Total con descuento: {" "}
             <span className="text-white font-semibold">
-              ${Math.max(0, subtotal - computedDiscount).toLocaleString()}
+              ${totalAfterDiscount.toLocaleString()}
             </span>
           </div>
         </>
@@ -258,7 +253,7 @@ export function PaymentSection({
           <div>
             Método seleccionado:
             <span className="ml-2 text-white font-medium">
-              {selectedPaymentMethod?.name}
+              {selectedPaymentMethod?.name ?? "Sin seleccionar"}
             </span>
           </div>
         </div>

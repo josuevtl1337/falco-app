@@ -25,7 +25,6 @@ interface ServiceListProps {
     onRegisterPayment: (service: ServiceWithStatus) => void;
     onEdit: (service: ServiceWithStatus) => void;
     onDelete: (service: ServiceWithStatus) => void;
-    onDeletePayment: (paymentId: number) => void;
     onAddNew: () => void;
 }
 
@@ -75,7 +74,6 @@ export default function ServiceList({
     onRegisterPayment,
     onEdit,
     onDelete,
-    onDeletePayment,
     onAddNew,
 }: ServiceListProps) {
     if (loading) {
@@ -178,7 +176,7 @@ export default function ServiceList({
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-1">
-                                        {service.status !== "paid" ? (
+                                        {service.status !== "paid" && (
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -187,19 +185,6 @@ export default function ServiceList({
                                                 title="Registrar pago"
                                             >
                                                 <IconCreditCardPay size={16} />
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    service.payment_id &&
-                                                    onDeletePayment(service.payment_id)
-                                                }
-                                                className="h-8 px-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
-                                                title="Anular pago"
-                                            >
-                                                <IconTrash size={14} />
                                             </Button>
                                         )}
                                         <Button
@@ -216,7 +201,7 @@ export default function ServiceList({
                                             size="sm"
                                             onClick={() => onDelete(service)}
                                             className="h-8 px-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
-                                            title="Eliminar"
+                                            title="Anular servicio"
                                         >
                                             <IconTrash size={14} />
                                         </Button>

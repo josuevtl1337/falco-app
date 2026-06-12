@@ -1,6 +1,6 @@
 // src/routes/print.routes.ts
 import { Router } from 'express';
-import { PrintController } from '../controllers/PrintController';
+import { PrintController } from '../controllers/PrintController.ts';
 
 const router = Router();
 

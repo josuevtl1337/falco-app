@@ -10,11 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  BAKERY_PRODUCTS,
-  BAKERY_PRODUCT_STEPS,
+import type {
+  CashRegisterShift,
+  ClosingPayload,
+  VitrineStockItem,
 } from "../../types/cash-register";
-import type { CashRegisterShift, ClosingPayload } from "../../types/cash-register";
 import { toast } from "sonner";
 
 interface Props {
@@ -25,6 +25,7 @@ interface Props {
   fetchBakeryStock: () => Promise<Record<string, number>>;
   estimatedCash?: number;
   estimatedBank?: number;
+  vitrineStockItems: VitrineStockItem[];
 }
 
 type Step = "input" | "summary";
@@ -51,34 +52,38 @@ export default function RegisterClosingDialog({
   fetchBakeryStock,
   estimatedCash = 0,
   estimatedBank = 0,
+  vitrineStockItems,
 }: Props) {
   const [step, setStep] = useState<Step>("input");
   const [cash, setCash] = useState("");
   const [bank, setBank] = useState("");
-  const [stock, setStock] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const name of BAKERY_PRODUCTS) {
-      initial[name] = "";
-    }
-    return initial;
-  });
+  const [stock, setStock] = useState<Record<string, string>>({});
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [estimationsLoaded, setEstimationsLoaded] = useState(false);
 
-  // Pre-fill all inputs with system-estimated values when dialog opens
+  const cashEnd = Math.max(0, estimatedCash);
+  const bankEnd = Math.max(0, estimatedBank);
+  const closingItems = useMemo(
+    () => vitrineStockItems.filter((item) => item.active && item.show_on_close),
+    [vitrineStockItems],
+  );
+
+  // Keep money fields in sync with the latest backend-calculated estimates.
+  useEffect(() => {
+    if (!open) return;
+    setCash(String(cashEnd));
+    setBank(String(bankEnd));
+  }, [open, cashEnd, bankEnd]);
+
+  // Pre-fill bakery stock with system-calculated values when dialog opens.
   useEffect(() => {
     if (open && !estimationsLoaded) {
-      // Pre-fill cash and bank with estimated values
-      setCash(String(estimatedCash));
-      setBank(String(estimatedBank));
-
-      // Pre-fill bakery stock with system-calculated values
       fetchBakeryStock().then((currentStock) => {
         const stockEstimates: Record<string, string> = {};
-        for (const name of BAKERY_PRODUCTS) {
-          stockEstimates[name] = String(currentStock[name] ?? 0);
+        for (const item of closingItems) {
+          stockEstimates[String(item.id)] = String(currentStock[String(item.id)] ?? 0);
         }
         setStock(stockEstimates);
         setEstimationsLoaded(true);
@@ -86,16 +91,13 @@ export default function RegisterClosingDialog({
         setEstimationsLoaded(true);
       });
     }
-  }, [open, estimationsLoaded, fetchBakeryStock, estimatedCash, estimatedBank]);
+  }, [open, estimationsLoaded, fetchBakeryStock, closingItems]);
 
   const handleStockChange = (name: string, value: string) => {
     setStock((prev) => ({ ...prev, [name]: value }));
   };
 
-  const isValid =
-    cash !== "" &&
-    bank !== "" &&
-    BAKERY_PRODUCTS.every((name) => stock[name] !== "");
+  const isValid = closingItems.every((item) => stock[String(item.id)] !== "");
 
   const handleGenerateSummary = async () => {
     if (!isValid || !register) return;
@@ -107,8 +109,8 @@ export default function RegisterClosingDialog({
 
       // Calculate stock_system based on start - sold
       const stockSystem: Record<string, number> = {};
-      for (const name of BAKERY_PRODUCTS) {
-        stockSystem[name] = currentStock[name] ?? 0;
+      for (const item of closingItems) {
+        stockSystem[String(item.id)] = currentStock[String(item.id)] ?? 0;
       }
 
       // Fetch sales data
@@ -118,13 +120,18 @@ export default function RegisterClosingDialog({
       const registerData = statusData.register;
 
       const stockEndActual: Record<string, number> = {};
-      for (const name of BAKERY_PRODUCTS) {
-        stockEndActual[name] = Number(stock[name]) || 0;
+      for (const item of closingItems) {
+        stockEndActual[String(item.id)] = Number(stock[String(item.id)]) || 0;
       }
 
+      const freshCashEnd = Math.max(0, statusData.estimatedCash ?? cashEnd);
+      const freshBankEnd = Math.max(0, statusData.estimatedBank ?? bankEnd);
+      setCash(String(freshCashEnd));
+      setBank(String(freshBankEnd));
+
       setSummaryData({
-        cashEnd: Number(cash) || 0,
-        bankEnd: Number(bank) || 0,
+        cashEnd: freshCashEnd,
+        bankEnd: freshBankEnd,
         stockEndActual,
         stockSystem,
         totalSales: registerData?.total_sales ?? 0,
@@ -148,14 +155,14 @@ export default function RegisterClosingDialog({
 
     try {
       const stockEndActual: Record<string, number> = {};
-      for (const name of BAKERY_PRODUCTS) {
-        stockEndActual[name] = Number(stock[name]) || 0;
+      for (const item of closingItems) {
+        stockEndActual[String(item.id)] = Number(stock[String(item.id)]) || 0;
       }
 
       await onSubmit({
         register_id: register.id,
-        cash_end: Number(cash) || 0,
-        bank_end: Number(bank) || 0,
+        cash_end: summaryData?.cashEnd ?? cashEnd,
+        bank_end: summaryData?.bankEnd ?? bankEnd,
         stock_end_actual: stockEndActual,
       });
 
@@ -170,13 +177,7 @@ export default function RegisterClosingDialog({
     setStep("input");
     setCash("");
     setBank("");
-    setStock(() => {
-      const initial: Record<string, string> = {};
-      for (const name of BAKERY_PRODUCTS) {
-        initial[name] = "";
-      }
-      return initial;
-    });
+    setStock({});
     setSummaryData(null);
     setEstimationsLoaded(false);
   };
@@ -204,12 +205,13 @@ export default function RegisterClosingDialog({
     text += `================================\n\n`;
     text += `EFECTIVO: Inicio $${register.cash_start.toLocaleString()} | Cierre $${summaryData.cashEnd.toLocaleString()} | Dif ${formatDiff(cashDiff)}\n`;
     text += `BANCO/MP: Inicio $${register.bank_start.toLocaleString()} | Cierre $${summaryData.bankEnd.toLocaleString()} | Dif ${formatDiff(bankDiff)}\n\n`;
-    text += `PANADERIA:\n`;
+    text += `VITRINA:\n`;
 
-    for (const name of BAKERY_PRODUCTS) {
-      const start = register.stock_start[name] ?? 0;
-      const actual = summaryData.stockEndActual[name] ?? 0;
-      text += `  ${name}: Inicio ${start} → Cierre ${actual}\n`;
+    for (const item of closingItems) {
+      const key = String(item.id);
+      const start = register.stock_start[key] ?? 0;
+      const actual = summaryData.stockEndActual[key] ?? 0;
+      text += `  ${item.label}: Inicio ${start} → Cierre ${actual}\n`;
     }
 
     text += `\nTotal Ventas: $${summaryData.totalSales.toLocaleString()}\n`;
@@ -222,7 +224,7 @@ export default function RegisterClosingDialog({
     text += `================================`;
 
     return text;
-  }, [summaryData, register, shiftLabel]);
+  }, [summaryData, register, shiftLabel, closingItems]);
 
   const handleCopySummary = async () => {
     try {
@@ -266,16 +268,13 @@ export default function RegisterClosingDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder={estimatedCash > 0 ? `Estimado: $${estimatedCash.toLocaleString()}` : "0"}
                     value={cash}
-                    onChange={(e) => setCash(e.target.value)}
-                    className="bg-[#181c1f] border-[var(--card-border)] text-white"
+                    readOnly
+                    className="bg-[#181c1f] border-[var(--card-border)] text-white opacity-80 cursor-not-allowed"
                   />
-                  {estimatedCash > 0 && (
-                    <p className="text-xs text-gray-500">
-                      Estimado: ${estimatedCash.toLocaleString()}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500">
+                    Apertura + ventas en efectivo: ${cashEnd.toLocaleString()}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-300">
@@ -285,44 +284,43 @@ export default function RegisterClosingDialog({
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder={estimatedBank > 0 ? `Estimado: $${estimatedBank.toLocaleString()}` : "0"}
                     value={bank}
-                    onChange={(e) => setBank(e.target.value)}
-                    className="bg-[#181c1f] border-[var(--card-border)] text-white"
+                    readOnly
+                    className="bg-[#181c1f] border-[var(--card-border)] text-white opacity-80 cursor-not-allowed"
                   />
-                  {estimatedBank > 0 && (
-                    <p className="text-xs text-gray-500">
-                      Estimado: ${estimatedBank.toLocaleString()}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500">
+                    Apertura + ventas Banco/MP: ${bankEnd.toLocaleString()}
+                  </p>
                 </div>
               </div>
 
               {/* Bakery stock with estimations pre-filled */}
               <div>
                 <h4 className="text-sm font-semibold text-gray-300 mb-1">
-                  Stock Final de Panadería
+                  Stock Final de Vitrina
                 </h4>
                 <p className="text-xs text-gray-500 mb-3">
-                  Pre-cargado con la estimación del sistema. Editá si el conteo real difiere.
+                  Pre-cargado con la estimación del sistema. Editá si el conteo real de vitrina difiere.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {BAKERY_PRODUCTS.map((name) => (
-                    <div key={name} className="space-y-1">
-                      <Label className="text-xs text-gray-400">{name}</Label>
+                  {closingItems.map((item) => (
+                    <div key={item.id} className="space-y-1">
+                      <Label className="text-xs text-gray-400">{item.label}</Label>
                       <Input
                         type="number"
                         min="0"
-                        step={BAKERY_PRODUCT_STEPS[name]}
+                        step={item.unit_step}
                         placeholder="0"
-                        value={stock[name]}
+                        value={stock[String(item.id)] ?? ""}
                         onChange={(e) =>
-                          handleStockChange(name, e.target.value)
+                          handleStockChange(String(item.id), e.target.value)
                         }
                         className="bg-[#181c1f] border-[var(--card-border)] text-white h-9"
                       />
-                      {BAKERY_PRODUCT_STEPS[name] === 0.5 && (
-                        <p className="text-[11px] text-gray-500">Permite medio pan: 0.5</p>
+                      {item.unit_step !== 1 && (
+                        <p className="text-[11px] text-gray-500">
+                          Permite fracciones de {item.unit_step}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -376,7 +374,7 @@ export default function RegisterClosingDialog({
               {/* Stock summary */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-gray-300">
-                  Stock Panadería
+                  Stock Vitrina
                 </h4>
                 <div className="bg-[#181c1f] rounded-lg p-3">
                   <div className="grid grid-cols-5 gap-2 text-xs text-gray-500 mb-2 font-medium">
@@ -386,21 +384,22 @@ export default function RegisterClosingDialog({
                     <span className="text-center">Real</span>
                     <span className="text-center">Dif</span>
                   </div>
-                  {BAKERY_PRODUCTS.map((name) => {
-                    const start = register.stock_start[name] ?? 0;
-                    const system = summaryData.stockSystem[name] ?? 0;
-                    const actual = summaryData.stockEndActual[name] ?? 0;
+                  {closingItems.map((item) => {
+                    const key = String(item.id);
+                    const start = register.stock_start[key] ?? 0;
+                    const system = summaryData.stockSystem[key] ?? 0;
+                    const actual = summaryData.stockEndActual[key] ?? 0;
                     const diff = actual - system;
                     const isWarning =
                       Math.abs(diff) > STOCK_DIFF_THRESHOLD;
 
                     return (
                       <div
-                        key={name}
+                        key={item.id}
                         className="grid grid-cols-5 gap-2 text-sm py-1 border-b border-gray-800 last:border-0"
                       >
                         <span className="col-span-1 text-gray-300 text-xs truncate">
-                          {name}
+                          {item.label}
                         </span>
                         <span className="text-center text-gray-400">
                           {start}

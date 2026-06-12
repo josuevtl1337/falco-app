@@ -35,7 +35,7 @@ export const ServiceModel = {
 
   getAll: (): Service[] => {
     return db
-      .prepare(`SELECT * FROM services ORDER BY name ASC`)
+      .prepare(`SELECT * FROM services WHERE active = 1 ORDER BY name ASC`)
       .all() as Service[];
   },
 
@@ -58,13 +58,35 @@ export const ServiceModel = {
     category: string;
     icon: string;
   }) => {
-    const result = db
-      .prepare(
-        `INSERT INTO services (name, monthly_amount, due_day, category, icon)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-      .run(data.name, data.monthly_amount, data.due_day, data.category, data.icon);
-    return { id: result.lastInsertRowid, ...data, active: 1 };
+    return db.transaction(() => {
+      const existing = db
+        .prepare(`SELECT * FROM services WHERE name = ?`)
+        .get(data.name) as Service | undefined;
+
+      if (existing && existing.active === 0) {
+        db.prepare(
+          `UPDATE services
+           SET monthly_amount = ?, due_day = ?, category = ?, icon = ?, active = 1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`
+        ).run(
+          data.monthly_amount,
+          data.due_day,
+          data.category,
+          data.icon,
+          existing.id,
+        );
+        return { ...existing, ...data, active: 1 };
+      }
+
+      const result = db
+        .prepare(
+          `INSERT INTO services (name, monthly_amount, due_day, category, icon)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(data.name, data.monthly_amount, data.due_day, data.category, data.icon);
+      return { id: result.lastInsertRowid, ...data, active: 1 };
+    })();
   },
 
   update: (
@@ -99,18 +121,13 @@ export const ServiceModel = {
   },
 
   delete: (id: number) => {
-    return db.transaction(() => {
-      db.prepare(
-        `DELETE FROM report_expenses
-         WHERE service_payment_id IN (
-           SELECT id FROM service_payments WHERE service_id = ?
-         )`
-      ).run(id);
-
-      db.prepare(`DELETE FROM service_payments WHERE service_id = ?`).run(id);
-
-      return db.prepare(`DELETE FROM services WHERE id = ?`).run(id);
-    })();
+    return db
+      .prepare(
+        `UPDATE services
+         SET active = 0, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`
+      )
+      .run(id);
   },
 
   toggleActive: (id: number, active: number) => {

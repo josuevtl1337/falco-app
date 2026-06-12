@@ -27,6 +27,12 @@ class CashRegisterController {
           .json({ error: "Cash and bank amounts are required and must be numbers" });
         return;
       }
+      if (cash_start < 0 || bank_start < 0) {
+        res
+          .status(400)
+          .json({ error: "Cash and bank amounts cannot be negative" });
+        return;
+      }
       if (!stock_start || typeof stock_start !== "object") {
         res
           .status(400)
@@ -65,6 +71,12 @@ class CashRegisterController {
         res
           .status(400)
           .json({ error: "Closing cash and bank amounts are required and must be numbers" });
+        return;
+      }
+      if (cash_end < 0 || bank_end < 0) {
+        res
+          .status(400)
+          .json({ error: "Closing cash and bank amounts cannot be negative" });
         return;
       }
       if (!stock_end_actual || typeof stock_end_actual !== "object") {

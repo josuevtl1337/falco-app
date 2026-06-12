@@ -10,17 +10,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  BAKERY_PRODUCTS,
-  BAKERY_PRODUCT_STEPS,
-} from "../../types/cash-register";
-import type { OpeningPayload } from "../../types/cash-register";
+import type { OpeningPayload, VitrineStockItem } from "../../types/cash-register";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shift: string;
   onSubmit: (data: OpeningPayload) => Promise<void>;
+  vitrineStockItems: VitrineStockItem[];
 }
 
 export default function RegisterOpeningDialog({
@@ -28,26 +25,25 @@ export default function RegisterOpeningDialog({
   onOpenChange,
   shift,
   onSubmit,
+  vitrineStockItems,
 }: Props) {
   const [cash, setCash] = useState("");
   const [bank, setBank] = useState("");
-  const [stock, setStock] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const name of BAKERY_PRODUCTS) {
-      initial[name] = "";
-    }
-    return initial;
-  });
+  const [stock, setStock] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const handleStockChange = (name: string, value: string) => {
     setStock((prev) => ({ ...prev, [name]: value }));
   };
 
+  const openingItems = vitrineStockItems.filter(
+    (item) => item.active && item.show_on_open,
+  );
+
   const isValid =
     cash !== "" &&
     bank !== "" &&
-    BAKERY_PRODUCTS.every((name) => stock[name] !== "");
+    openingItems.every((item) => stock[String(item.id)] !== "");
 
   const handleSubmit = async () => {
     if (!isValid || submitting) return;
@@ -55,8 +51,8 @@ export default function RegisterOpeningDialog({
 
     try {
       const stockStart: Record<string, number> = {};
-      for (const name of BAKERY_PRODUCTS) {
-        stockStart[name] = Number(stock[name]) || 0;
+      for (const item of openingItems) {
+        stockStart[String(item.id)] = Number(stock[String(item.id)]) || 0;
       }
 
       await onSubmit({
@@ -69,13 +65,7 @@ export default function RegisterOpeningDialog({
       // Reset form
       setCash("");
       setBank("");
-      setStock(() => {
-        const initial: Record<string, string> = {};
-        for (const name of BAKERY_PRODUCTS) {
-          initial[name] = "";
-        }
-        return initial;
-      });
+      setStock({});
     } finally {
       setSubmitting(false);
     }
@@ -126,23 +116,27 @@ export default function RegisterOpeningDialog({
           {/* Bakery stock */}
           <div>
             <h4 className="text-sm font-semibold text-gray-300 mb-3">
-              Stock Inicial de Panadería
+              Stock Inicial de Vitrina
             </h4>
             <div className="grid grid-cols-2 gap-3">
-              {BAKERY_PRODUCTS.map((name) => (
-                <div key={name} className="space-y-1">
-                  <Label className="text-xs text-gray-400">{name}</Label>
+              {openingItems.map((item) => (
+                <div key={item.id} className="space-y-1">
+                  <Label className="text-xs text-gray-400">{item.label}</Label>
                   <Input
                     type="number"
                     min="0"
-                    step={BAKERY_PRODUCT_STEPS[name]}
+                    step={item.unit_step}
                     placeholder="0"
-                    value={stock[name]}
-                    onChange={(e) => handleStockChange(name, e.target.value)}
+                    value={stock[String(item.id)] ?? ""}
+                    onChange={(e) =>
+                      handleStockChange(String(item.id), e.target.value)
+                    }
                     className="bg-[#181c1f] border-[var(--card-border)] text-white h-9"
                   />
-                  {BAKERY_PRODUCT_STEPS[name] === 0.5 && (
-                    <p className="text-[11px] text-gray-500">Permite medio pan: 0.5</p>
+                  {item.unit_step !== 1 && (
+                    <p className="text-[11px] text-gray-500">
+                      Permite fracciones de {item.unit_step}
+                    </p>
                   )}
                 </div>
               ))}

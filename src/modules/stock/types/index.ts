@@ -13,6 +13,7 @@ export interface StockMenuItemMap {
   stock_product_id: number;
   menu_item_id: number;
   menu_item_name?: string;
+  quantity_per_item: number;
 }
 
 export interface StockMovement {
@@ -42,4 +43,26 @@ export interface MenuItem {
   is_active: number;
   category_id?: number;
   category_name?: string;
+}
+
+
+export interface VitrineStockMenuItemMap {
+  id: number;
+  vitrine_stock_item_id: number;
+  menu_item_id: number;
+  menu_item_name?: string;
+  quantity_per_item: number;
+}
+
+export interface VitrineStockItem {
+  id: number;
+  label: string;
+  unit_step: number;
+  show_on_open: number;
+  show_on_close: number;
+  active: number;
+  sort_order: number;
+  mappings?: VitrineStockMenuItemMap[];
+  created_at?: string;
+  updated_at?: string;
 }

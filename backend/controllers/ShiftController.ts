@@ -1,5 +1,5 @@
 import type { Response, Request } from "express";
-import ShiftModel from "../models/ShiftModel";
+import ShiftModel from "../models/ShiftModel.ts";
 
 class ShiftController {
   public async closeShift(req: Request, res: Response): Promise<void> {
