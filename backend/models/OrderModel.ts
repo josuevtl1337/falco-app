@@ -1,10 +1,11 @@
 import db, { getLocalTimestamp } from "../db.ts";
+import { StockModel } from "./StockModel.ts";
 
 export interface Order {
   id?: number;
   table_number: string;
   shift: "morning" | "afternoon";
-  status?: "open" | "paid" | "cancelled";
+  status?: "open" | "debt" | "paid" | "cancelled";
   discount_percentage?: number;
   total_amount: number;
   payment_method_id?: number;
@@ -18,6 +19,28 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+}
+
+export interface PartialPaymentInput {
+  payment_method_id: number;
+  discount_percentage?: number;
+  total_amount: number;
+  items: Array<{
+    menu_item_id: number;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+  }>;
+}
+
+function parseOrderRow(row: any) {
+  if (!row) return null;
+  return {
+    ...row,
+    items: JSON.parse(row.items || "[]").filter(
+      (item: OrderItem) => item.menu_item_id !== null,
+    ),
+  };
 }
 
 export const OrderModel = {
@@ -195,24 +218,28 @@ export const OrderModel = {
   },
 
   getById: (id: number) => {
-    return db
+    const row = db
       .prepare(
         `
-      SELECT o.*, json_group_array(
-        json_object(
-          'menu_item_id', oi.menu_item_id,
-          'quantity', oi.quantity,
-          'unit_price', oi.unit_price,
-          'subtotal', oi.subtotal
-        )
-      ) as items
+      SELECT o.*,
+        json_group_array(
+          json_object(
+            'menu_item_id', oi.menu_item_id,
+            'menu_item_name', mi.name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'subtotal', oi.subtotal
+          )
+        ) as items
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.table_number = ?
+      LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+      WHERE o.id = ?
       GROUP BY o.id
     `
       )
       .get(id);
+    return parseOrderRow(row);
   },
 
   updateStatus: (order: Order) => {
@@ -260,6 +287,127 @@ export const OrderModel = {
       });
 
       return OrderModel.getById(id);
+    })();
+  },
+
+  payPartial: (orderId: number, payment: PartialPaymentInput) => {
+    if (!payment.items.length) {
+      throw new Error("Selecciona al menos un item para cobrar");
+    }
+
+    return db.transaction(() => {
+      const order = db
+        .prepare(`SELECT * FROM orders WHERE id = ?`)
+        .get(orderId) as Order | undefined;
+
+      if (!order) throw new Error("Comanda no encontrada");
+      if (order.status !== "open") {
+        throw new Error("Solo se pueden dividir comandas abiertas");
+      }
+
+      const originalItems = db
+        .prepare(
+          `SELECT oi.*, mi.name as menu_item_name
+           FROM order_items oi
+           LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+           WHERE oi.order_id = ?`
+        )
+        .all(orderId) as OrderItem[];
+
+      const originalByMenuItem = new Map(
+        originalItems.map((item) => [Number(item.menu_item_id), item]),
+      );
+
+      for (const item of payment.items) {
+        const original = originalByMenuItem.get(Number(item.menu_item_id));
+        if (!original) {
+          throw new Error("Uno de los items no pertenece a la comanda");
+        }
+        if (Number(item.quantity) <= 0 || Number(item.quantity) > Number(original.quantity)) {
+          throw new Error(`Cantidad invalida para ${original.menu_item_name}`);
+        }
+      }
+
+      const paidOrderResult = db
+        .prepare(
+          `INSERT INTO orders (
+             table_number, shift, status, discount_percentage,
+             total_amount, payment_method_id, notes, created_at
+           ) VALUES (?, ?, 'paid', ?, ?, ?, ?, ?)`
+        )
+        .run(
+          order.table_number,
+          order.shift,
+          payment.discount_percentage || 0,
+          payment.total_amount,
+          payment.payment_method_id,
+          `Subcuenta de orden #${orderId}`,
+          getLocalTimestamp(),
+        );
+
+      const paidOrderId = Number(paidOrderResult.lastInsertRowid);
+
+      for (const item of payment.items) {
+        db.prepare(
+          `INSERT INTO order_items (
+             order_id, menu_item_id, quantity, unit_price, subtotal
+           ) VALUES (?, ?, ?, ?, ?)`
+        ).run(
+          paidOrderId,
+          item.menu_item_id,
+          item.quantity,
+          item.unit_price,
+          item.subtotal,
+        );
+      }
+
+      StockModel.deductStockForOrder(paidOrderId);
+
+      let remainingTotal = 0;
+
+      for (const original of originalItems) {
+        const selected = payment.items.find(
+          (item) => Number(item.menu_item_id) === Number(original.menu_item_id),
+        );
+        const selectedQty = Number(selected?.quantity || 0);
+        const remainingQty = Number(original.quantity) - selectedQty;
+
+        if (remainingQty <= 0) {
+          db.prepare(`DELETE FROM order_items WHERE order_id = ? AND menu_item_id = ?`).run(
+            orderId,
+            original.menu_item_id,
+          );
+          continue;
+        }
+
+        const remainingSubtotal = remainingQty * Number(original.unit_price);
+        remainingTotal += remainingSubtotal;
+        db.prepare(
+          `UPDATE order_items
+           SET quantity = ?, subtotal = ?
+           WHERE order_id = ? AND menu_item_id = ?`
+        ).run(remainingQty, remainingSubtotal, orderId, original.menu_item_id);
+      }
+
+      if (remainingTotal <= 0) {
+        db.prepare(
+          `UPDATE orders
+           SET status = 'cancelled',
+               total_amount = 0
+           WHERE id = ?`
+        ).run(orderId);
+      } else {
+        db.prepare(
+          `UPDATE orders
+           SET total_amount = ?
+           WHERE id = ?`
+        ).run(remainingTotal, orderId);
+      }
+
+      return {
+        paidOrder: OrderModel.getById(paidOrderId),
+        remainingOrder: remainingTotal > 0 ? OrderModel.getById(orderId) : null,
+      };
     })();
   },
 

@@ -84,6 +84,20 @@ class OrderController {
     }
   }
 
+  public async payPartialOrder(req: Request, res: Response) {
+    try {
+      const payload = req.body && req.body.body ? req.body.body : req.body;
+      const result = OrderModel.payPartial(Number(req.params.id), payload);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      const message = error?.message || "Error al cobrar subcuenta";
+      res.status(message.includes("Stock insuficiente") ? 400 : 500).json({
+        error: message.includes("Stock insuficiente") ? "Stock insuficiente" : "Error al cobrar subcuenta",
+        message,
+      });
+    }
+  }
+
   public async updateOrder(req: Request, res: Response) {
     const payload = req.body && req.body.body ? req.body.body : req.body;
     try {

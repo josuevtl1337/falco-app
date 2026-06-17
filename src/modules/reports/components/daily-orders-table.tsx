@@ -17,6 +17,7 @@ interface OrderItem {
 export interface Order {
   id: number;
   table_number: string;
+  shift: "morning" | "afternoon";
   status: string;
   total_amount: number;
   created_at: string;
@@ -74,77 +75,182 @@ export default function DailyOrdersTable({
 
   if (loading) {
     return (
-      <div className="text-center p-4 text-slate-400">
+      <div className="rounded-lg border border-border/60 bg-background/30 p-8 text-center text-sm text-muted-foreground">
         Cargando historial...
       </div>
     );
   }
 
-  if (orders.length === 0) {
+  if (shift === "both" || !shift) {
+    const morningOrders = orders.filter((order) => order.shift === "morning");
+    const afternoonOrders = orders.filter(
+      (order) => order.shift === "afternoon",
+    );
+
     return (
-      <div className="text-center p-4 text-slate-400">
-        No hay órdenes para este período.
+      <div className="flex flex-col gap-5">
+        <OrdersSection
+          title="Turno mañana"
+          orders={morningOrders}
+          emptyMessage="No hay comandas en el turno mañana."
+        />
+        <OrdersSection
+          title="Turno tarde"
+          orders={afternoonOrders}
+          emptyMessage="No hay comandas en el turno tarde."
+        />
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-950/50">
+    <OrdersSection
+      title={shift === "morning" ? "Turno mañana" : "Turno tarde"}
+      orders={orders}
+      emptyMessage="No hay comandas en este turno."
+    />
+  );
+}
+
+function OrdersSection({
+  title,
+  orders,
+  emptyMessage,
+}: {
+  title: string;
+  orders: Order[];
+  emptyMessage: string;
+}) {
+  const total = orders.reduce((sum, order) => sum + order.total_amount, 0);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">
+            {orders.length} {orders.length === 1 ? "comanda" : "comandas"}
+          </p>
+        </div>
+        <div className="rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-right">
+          <div className="text-[10px] leading-none text-muted-foreground">
+            Total turno
+          </div>
+          <div className="mt-1 text-sm font-semibold leading-none text-foreground">
+            ${total.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <OrdersTable orders={orders} emptyMessage={emptyMessage} />
+    </section>
+  );
+}
+
+function OrdersTable({
+  orders,
+  emptyMessage,
+}: {
+  orders: Order[];
+  emptyMessage: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border/60 bg-background/30">
       <Table>
-        <TableHeader className="bg-slate-900/50">
-          <TableRow className="border-slate-800 hover:bg-slate-900/50">
-            <TableHead className="text-slate-300">Hora</TableHead>
-            <TableHead className="text-slate-300">Mesa</TableHead>
-            <TableHead className="text-slate-300">Items</TableHead>
-            <TableHead className="text-slate-300">Pago</TableHead>
-            <TableHead className="text-right text-slate-300">Total</TableHead>
-            <TableHead className="text-center text-slate-300">Estado</TableHead>
+        <TableHeader className="bg-muted/30">
+          <TableRow className="border-border/60 hover:bg-transparent">
+            <TableHead className="text-xs text-muted-foreground">Hora</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Mesa</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Items</TableHead>
+            <TableHead className="text-xs text-muted-foreground">Pago</TableHead>
+            <TableHead className="text-right text-xs text-muted-foreground">
+              Total
+            </TableHead>
+            <TableHead className="text-center text-xs text-muted-foreground">
+              Estado
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map((order) => (
-            <TableRow
-              key={order.id}
-              className="border-slate-800 hover:bg-slate-900/30"
-            >
-              <TableCell className="font-medium text-slate-300">
-                {order.created_at?.slice(11, 16) || "-"}
-              </TableCell>
-              <TableCell className="text-slate-400">
-                {order.table_number || "-"}
-              </TableCell>
+          {orders.length === 0 ? (
+            <TableRow className="border-border/50 hover:bg-transparent">
               <TableCell
-                className="text-slate-400 max-w-[200px] truncate"
-                title={order.items
-                  .map((i) => `${i.quantity} ${i.menu_item_name}`)
-                  .join(", ")}
+                colSpan={6}
+                className="h-20 text-center text-sm text-muted-foreground"
               >
-                {order.items
-                  .map((i) => `${i.quantity} ${i.menu_item_name}`)
-                  .join(", ")}
-              </TableCell>
-              <TableCell className="text-slate-400">
-                {order.payment_method_name || "-"}
-              </TableCell>
-              <TableCell className="text-right font-medium text-slate-200">
-                ${order.total_amount?.toLocaleString()}
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge
-                  variant="outline"
-                  className={
-                    order.status === "paid"
-                      ? "border-green-500/50 text-green-400 bg-green-500/10"
-                      : "border-yellow-500/50 text-yellow-400 bg-yellow-500/10"
-                  }
-                >
-                  {order.status === "paid" ? "Pagado" : order.status}
-                </Badge>
+                {emptyMessage}
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            orders.map((order) => {
+              const itemLabel = order.items
+                .filter((item) => item.menu_item_name)
+                .map((item) => `${item.quantity} ${item.menu_item_name}`)
+                .join(", ");
+
+              return (
+                <TableRow
+                  key={order.id}
+                  className="border-border/50 hover:bg-muted/20"
+                >
+                  <TableCell className="font-medium text-foreground">
+                    {order.created_at?.slice(11, 16) || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span className="rounded-md bg-muted/30 px-2 py-1 text-xs font-medium text-foreground">
+                      {order.table_number || "-"}
+                    </span>
+                  </TableCell>
+                  <TableCell
+                    className="max-w-[520px] truncate text-muted-foreground"
+                    title={itemLabel}
+                  >
+                    {itemLabel || "Sin items"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {order.payment_method_name || "-"}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-foreground">
+                    ${order.total_amount?.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <StatusBadge status={order.status} />
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const config =
+    status === "paid"
+      ? {
+          label: "Pagado",
+          className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+        }
+      : status === "debt"
+        ? {
+            label: "A cuenta",
+            className: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+          }
+        : status === "cancelled"
+          ? {
+              label: "Cancelada",
+              className: "border-slate-500/40 bg-slate-500/10 text-slate-300",
+            }
+          : {
+              label: status,
+              className: "border-yellow-500/40 bg-yellow-500/10 text-yellow-300",
+            };
+
+  return (
+    <Badge variant="outline" className={config.className}>
+      {config.label}
+    </Badge>
   );
 }

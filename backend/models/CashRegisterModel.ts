@@ -11,17 +11,30 @@ function getPaidSalesByMethodSince(openedAtSqlite: string): {
 } {
   const salesByMethod = db
     .prepare(
-      `SELECT pm.name as method_name, COALESCE(SUM(o.total_amount), 0) as total
+      `SELECT pm.name as method_name, pm.code as method_code, COALESCE(SUM(o.total_amount), 0) as total
        FROM orders o
        LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
        WHERE o.status = 'paid' AND o.created_at >= ?
-       GROUP BY pm.name`
+       GROUP BY pm.name, pm.code
+       UNION ALL
+       SELECT pm.name as method_name, pm.code as method_code, COALESCE(SUM(cap.amount_paid), 0) as total
+       FROM customer_account_payments cap
+       LEFT JOIN payment_methods pm ON pm.id = cap.payment_method_id
+       WHERE cap.created_at >= ?
+       GROUP BY pm.name, pm.code`
     )
-    .all(openedAtSqlite) as Array<{ method_name: string | null; total: number }>;
+    .all(openedAtSqlite, openedAtSqlite) as Array<{
+    method_name: string | null;
+    method_code: string | null;
+    total: number;
+  }>;
 
   let cashSales = 0;
   let bankSales = 0;
   for (const row of salesByMethod) {
+    if (row.method_code === "account" || row.method_name === "Cuenta corriente") {
+      continue;
+    }
     if (row.method_name === "Efectivo") {
       cashSales += row.total;
     } else {
@@ -30,6 +43,38 @@ function getPaidSalesByMethodSince(openedAtSqlite: string): {
   }
 
   return { cashSales, bankSales };
+}
+
+function getCollectedSalesSince(openedAtSqlite: string): {
+  total_sales: number;
+  order_count: number;
+} {
+  return db
+    .prepare(
+      `SELECT
+         COALESCE(SUM(total_sales), 0) AS total_sales,
+         COALESCE(SUM(order_count), 0) AS order_count
+       FROM (
+         SELECT
+           COALESCE(SUM(o.total_amount), 0) AS total_sales,
+           COUNT(*) AS order_count
+         FROM orders o
+         LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
+         WHERE o.status = 'paid'
+           AND o.created_at >= ?
+           AND COALESCE(pm.code, '') != 'account'
+         UNION ALL
+         SELECT
+           COALESCE(SUM(cap.amount_paid), 0) AS total_sales,
+           0 AS order_count
+         FROM customer_account_payments cap
+         WHERE cap.created_at >= ?
+       )`
+    )
+    .get(openedAtSqlite, openedAtSqlite) as {
+    total_sales: number;
+    order_count: number;
+  };
 }
 
 function calculateClosingAmounts(register: CashRegisterShift): {
@@ -146,14 +191,7 @@ export const CashRegisterModel = {
     const openedAtSqlite = register.opened_at;
 
     // Compute live sales totals for the open register
-    const salesResult = db
-      .prepare(
-        `SELECT COALESCE(SUM(total_amount), 0) as total_sales,
-                COUNT(*) as order_count
-         FROM orders
-         WHERE status = 'paid' AND created_at >= ?`
-      )
-      .get(openedAtSqlite) as { total_sales: number; order_count: number };
+    const salesResult = getCollectedSalesSince(openedAtSqlite);
 
     const dailyClosed = db
       .prepare(
@@ -263,17 +301,7 @@ export const CashRegisterModel = {
       );
 
       // Calculate total sales and order count
-      const salesResult = db
-        .prepare(
-          `SELECT COALESCE(SUM(total_amount), 0) as total_sales,
-                  COUNT(*) as order_count
-           FROM orders
-           WHERE status = 'paid' AND created_at >= ?`
-        )
-        .get(openedAtSqlite) as {
-        total_sales: number;
-        order_count: number;
-      };
+      const salesResult = getCollectedSalesSince(openedAtSqlite);
 
       const closed_at = getLocalTimestamp();
 

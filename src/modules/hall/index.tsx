@@ -11,7 +11,9 @@ import {
 import CompactHallPanel from "./cmp/compact-hall-panel";
 import PosMenuGrid from "./cmp/pos-menu-grid";
 import OrderCart from "./cmp/order-cart";
-import CheckoutSheetContent from "./cmp/checkout-sheet-content";
+import CheckoutSheetContent, {
+  type SplitPaymentItem,
+} from "./cmp/checkout-sheet-content";
 import RegisterOpeningDialog from "./cmp/cash-register/register-opening-dialog";
 import RegisterClosingDialog from "./cmp/cash-register/register-closing-dialog";
 import {
@@ -21,6 +23,24 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { formatARS } from "@/modules/commons/utils/helpers";
 
 export interface OrderStateData {
   id: string;
@@ -29,6 +49,7 @@ export interface OrderStateData {
   status: string;
   discount_percentage: number;
   total_amount: number;
+  notes?: string;
   items: {
     menu_item_id: string;
     menu_item_name: string;
@@ -58,6 +79,9 @@ const orderItemsSignature = (items: OrderStateData["items"]) =>
 function OrdersPage() {
   const [seat, setSeat] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [customers, setCustomers] = useState<{ id: number; name: string; balance: number }[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [pendingClose, setPendingClose] = useState(false);
 
   const { shift, setShift } = useContext(ShiftContext);
@@ -258,8 +282,54 @@ function OrdersPage() {
   }, [currentOrder, seat, shift, isRegisterOpen]);
 
   const onPay = useCallback(
-    async (paymentData: PaymentData) => {
+    async (paymentData: PaymentData, splitItems?: SplitPaymentItem[]) => {
       if (!currentOrder) return;
+
+      if (splitItems?.length) {
+        const body = {
+          payment_method_id: paymentData.paymentMethod.id,
+          discount_percentage: paymentData.discount_percentage,
+          total_amount: paymentData.total_amount,
+          items: splitItems.map((p) => ({
+            menu_item_id: p.menu_item_id,
+            quantity: p.quantity,
+            unit_price: p.unit_price,
+            subtotal: p.subtotal,
+          })),
+        };
+
+        try {
+          const res = await fetch(
+            `http://localhost:3001/api/orders/${currentOrder.id}/partial-payment`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            },
+          );
+
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData?.message || "Error al cobrar subcuenta");
+          }
+
+          const data = await res.json();
+          toast.success("Subcuenta cobrada");
+          setCheckoutOpen(false);
+
+          if (data.remainingOrder) {
+            setCurrentOrder(data.remainingOrder);
+            setSeat(String(data.remainingOrder.table_number));
+            await getAllOrders();
+          } else {
+            setPendingClose(true);
+            await getAllOrders();
+          }
+        } catch (err: any) {
+          toast.error(err.message || "Error al cobrar subcuenta");
+        }
+        return;
+      }
 
       const body = {
         ...currentOrder,
@@ -303,6 +373,52 @@ function OrdersPage() {
     },
     [currentOrder],
   );
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/customers");
+      if (!response.ok) throw new Error("Error al obtener clientes");
+      setCustomers(await response.json());
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      toast.error("No se pudieron cargar los clientes");
+    }
+  }, []);
+
+  const openAccountDialog = useCallback(async () => {
+    if (!currentOrder?.id) return;
+    await fetchCustomers();
+    setSelectedCustomerId("");
+    setAccountDialogOpen(true);
+  }, [currentOrder?.id, fetchCustomers]);
+
+  const onAssignToAccount = useCallback(async () => {
+    if (!currentOrder?.id || !selectedCustomerId) return;
+
+    try {
+      const res = await fetch(
+        `http://localhost:3001/api/orders/${currentOrder.id}/customer-account`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customer_id: Number(selectedCustomerId) }),
+        },
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.error || "Error al asignar la cuenta");
+      }
+
+      const customer = customers.find((item) => String(item.id) === selectedCustomerId);
+      toast.success(`Comanda asignada a ${customer?.name ?? "cuenta corriente"}`);
+      setAccountDialogOpen(false);
+      setPendingClose(true);
+      await getAllOrders();
+    } catch (err: any) {
+      toast.error(err.message || "Error al asignar la cuenta");
+    }
+  }, [currentOrder?.id, customers, selectedCustomerId]);
 
   const onEditCommand = useCallback(async () => {
     if (!currentOrder) return;
@@ -366,12 +482,22 @@ function OrdersPage() {
   }, [currentOrder]);
 
   const onPrint = useCallback(
-    async (paymentData?: PaymentSummary) => {
+    async (paymentData?: PaymentSummary, splitItems?: SplitPaymentItem[]) => {
       if (!currentOrder) return;
+
+      const printableItems = splitItems?.length ? splitItems : currentOrder.items;
+      const printableSubtotal = printableItems.reduce(
+        (acc, item) => acc + item.unit_price * item.quantity,
+        0,
+      );
 
       let body: Record<string, unknown> = {
         ...currentOrder,
-        items: currentOrder.items.map((p) => ({
+        total_amount: printableSubtotal,
+        notes: splitItems?.length
+          ? `Subcuenta de orden #${currentOrder.id}`
+          : currentOrder.notes,
+        items: printableItems.map((p) => ({
           menu_item_id: p.menu_item_id,
           menu_item_name: p.menu_item_name,
           quantity: p.quantity,
@@ -418,8 +544,10 @@ function OrdersPage() {
       }
       const data = await response.json();
       setOrders(data);
+      return data;
     } catch (err) {
       console.error("Error fetching orders:", err);
+      return [];
     }
   };
 
@@ -499,6 +627,7 @@ function OrdersPage() {
           onCommand={onCommand}
           onSave={onEditCommand}
           onPay={() => setCheckoutOpen(true)}
+          onAssignToAccount={openAccountDialog}
           onPrint={() => onPrint()}
           isReadyToPay={currentOrder?.status === "open" || false}
           isRegisterOpen={isRegisterOpen}
@@ -529,6 +658,50 @@ function OrdersPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent className="bg-[var(--card-background)] border-[var(--card-border)] text-white">
+          <DialogHeader>
+            <DialogTitle>Asignar a cuenta corriente</DialogTitle>
+            <DialogDescription>
+              La comanda se cierra y queda sumada al saldo del cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3">
+            <div className="rounded-lg border border-[var(--card-border)] bg-background/30 p-3">
+              <div className="text-xs text-muted-foreground">Total a asignar</div>
+              <div className="text-2xl font-bold">
+                {formatARS(currentOrder?.total_amount ?? 0)}
+              </div>
+            </div>
+
+            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Elegir cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={String(customer.id)}>
+                      {customer.name} · saldo {formatARS(customer.balance || 0)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAccountDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onAssignToAccount} disabled={!selectedCustomerId}>
+              Asignar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cash register dialogs */}
       <RegisterOpeningDialog

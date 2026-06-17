@@ -6,22 +6,65 @@ import useReports, {
 } from "../hooks/use-reports";
 import type { PaymentBreakdownItem } from "../hooks/use-reports";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import DailyOrdersTable from "./daily-orders-table";
 import type { Order } from "./daily-orders-table";
-import { IconDownload } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconClock,
+  IconCreditCard,
+  IconDownload,
+  IconFilter,
+  IconReceipt2,
+  IconStar,
+  IconTrendingUp,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
+
+const PERIOD_OPTIONS = [
+  ["today", "Hoy"],
+  ["yesterday", "Ayer"],
+  ["week", "Semana"],
+  ["month", "Mes"],
+] as const;
+
+const SHIFT_OPTIONS = [
+  ["both", "Todos"],
+  ["morning", "Mañana"],
+  ["afternoon", "Tarde"],
+] as const;
+
+function formatMoney(value = 0) {
+  return value.toLocaleString("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  });
+}
 
 export default function DailyMetrics() {
   const [shift, setShift] = useState<"morning" | "afternoon" | "both">("both");
-  const [timeFilter, setTimeFilter] = useState<string>("today");
+  const [timeFilter, setTimeFilter] = useState("today");
   const [showPaymentBreakdown, setShowPaymentBreakdown] = useState(false);
   const ordersRef = useRef<Order[]>([]);
 
   const [data] = useReports(timeFilter, shift);
 
-  // Compute date/range props for the orders table
   const tableFilters = useMemo(() => {
     switch (timeFilter) {
       case "yesterday":
@@ -36,7 +79,6 @@ export default function DailyMetrics() {
     }
   }, [timeFilter]);
 
-  // Payment breakdown helpers
   const paymentData = useMemo(() => {
     const breakdown = data?.paymentBreakdown || [];
     const grandTotal = breakdown.reduce((sum, b) => sum + b.total, 0);
@@ -49,16 +91,16 @@ export default function DailyMetrics() {
       };
 
     const pct = (val: number) =>
-      grandTotal > 0 ? ((val / grandTotal) * 100).toFixed(1) : "0.0";
+      grandTotal > 0 ? Math.round((val / grandTotal) * 100) : 0;
 
     const cash = findMethod("cash");
     const transfer = findMethod("transfer");
     const other = findMethod("other");
 
     return {
-      cash: { ...cash, pct: pct(cash.total) },
-      transfer: { ...transfer, pct: pct(transfer.total) },
-      other: { ...other, pct: pct(other.total) },
+      cash: { ...cash, pct: pct(cash.total), label: "Efectivo" },
+      transfer: { ...transfer, pct: pct(transfer.total), label: "Transferencia" },
+      other: { ...other, pct: pct(other.total), label: "Tarjeta / QR" },
     };
   }, [data?.paymentBreakdown]);
 
@@ -66,7 +108,6 @@ export default function DailyMetrics() {
     ordersRef.current = orders;
   }, []);
 
-  // CSV export
   const handleExportCSV = useCallback(() => {
     const orders = ordersRef.current;
     if (!orders.length) {
@@ -97,7 +138,10 @@ export default function DailyMetrics() {
         o.created_at?.slice(11, 16) || "-",
         escapeCsvField(o.table_number || "-"),
         escapeCsvField(
-          o.items.map((i) => `${i.quantity} ${i.menu_item_name}`).join(", "),
+          o.items
+            .filter((i) => i.menu_item_name)
+            .map((i) => `${i.quantity} ${i.menu_item_name}`)
+            .join(", ") || "Sin items",
         ),
         escapeCsvField(o.payment_method_name || "-"),
         o.total_amount,
@@ -139,253 +183,195 @@ export default function DailyMetrics() {
     }
   }, [timeFilter]);
 
+  const shiftLabel = useMemo(() => {
+    switch (shift) {
+      case "morning":
+        return "Mañana";
+      case "afternoon":
+        return "Tarde";
+      default:
+        return "Todos";
+    }
+  }, [shift]);
+
+  const metricCards = [
+    {
+      label: "Total vendido",
+      value: formatMoney(data?.total || 0),
+      note: periodLabel,
+      icon: IconTrendingUp,
+    },
+    {
+      label: "Comandas",
+      value: String(data?.count || 0),
+      note: "registradas",
+      icon: IconReceipt2,
+    },
+    {
+      label: "Ticket promedio",
+      value: formatMoney(data?.avg || 0),
+      note: "por comanda",
+      icon: IconCreditCard,
+    },
+    {
+      label: "Producto top",
+      value: data?.topProduct?.name ?? "Sin datos",
+      note: data?.topProduct?.qty
+        ? `${data.topProduct.qty} unidades`
+        : "sin ventas",
+      icon: IconStar,
+    },
+  ];
+
   return (
-    <div className="w-full space-y-6">
-      <div>
-        <p className="text-sm text-slate-400 mt-1">
-          Visualiza tus métricas de desempeño
-        </p>
-      </div>
-
-      {/* Filtros */}
-      <Card className="border-slate-800 bg-slate-950/50 backdrop-blur">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Filtros</CardTitle>
-          {/* Turnos */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-200">Turno</label>
-            <ToggleGroup
-              type="single"
-              value={shift}
-              onValueChange={(value) => value && setShift(value as any)}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="morning" className="rounded-lg border">
-                <span className="text-sm">Mañana</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem value="afternoon" className="rounded-lg border">
-                <span className="text-sm">Tarde</span>
-              </ToggleGroupItem>
-              <ToggleGroupItem value="both" className="rounded-lg border">
-                <span className="text-sm">Ambos</span>
-              </ToggleGroupItem>
-            </ToggleGroup>
+    <div className="w-full">
+      <Card className="rounded-lg border-border/60 bg-card/70 py-0 shadow-none">
+        <CardHeader className="border-b border-border/60 px-5 py-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-lg text-foreground">
+                Comandas
+              </CardTitle>
+              <span className="rounded-md border border-border/60 bg-background/50 px-2 py-1 text-xs text-muted-foreground">
+                {periodLabel} · {shiftLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Historial filtrado por período y turno
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Período de tiempo */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-200">
-              Período
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {(
-                [
-                  ["today", "Hoy"],
-                  ["yesterday", "Ayer"],
-                  ["week", "Esta semana"],
-                  ["month", "Este mes"],
-                ] as const
-              ).map(([value, label]) => (
-                <Button
-                  key={value}
-                  variant={timeFilter === value ? "default" : "outline"}
-                  className={`rounded-lg text-xs md:text-sm font-medium transition-all`}
-                  onClick={() => setTimeFilter(value)}
+
+          <CardAction className="flex flex-wrap items-center justify-end gap-2 max-md:col-start-1 max-md:row-start-2 max-md:justify-self-start">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/40 p-1">
+              <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground">
+                <IconFilter />
+                Filtro
+              </div>
+              <Select value={timeFilter} onValueChange={setTimeFilter}>
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 min-w-[116px] border-border/70 bg-card/70 text-xs"
                 >
-                  {label}
-                </Button>
-              ))}
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {PERIOD_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={shift}
+                onValueChange={(value) =>
+                  setShift(value as "morning" | "afternoon" | "both")
+                }
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-8 min-w-[112px] border-border/70 bg-card/70 text-xs"
+                >
+                  <SelectValue placeholder="Turno" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {SHIFT_OPTIONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border/70 text-xs"
+              onClick={() => setShowPaymentBreakdown((value) => !value)}
+            >
+              <IconCreditCard data-icon="inline-start" />
+              Formas de pago
+              {showPaymentBreakdown ? (
+                <IconChevronUp data-icon="inline-end" />
+              ) : (
+                <IconChevronDown data-icon="inline-end" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border/70 text-xs"
+              onClick={handleExportCSV}
+            >
+              <IconDownload data-icon="inline-start" />
+              CSV
+            </Button>
+          </CardAction>
+
+          <div className="col-span-full mt-3 flex w-fit max-w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/50 bg-background/30 px-3 py-2">
+            {metricCards.map((metric) => {
+              const MetricIcon = metric.icon;
+
+              return (
+                <div
+                  key={metric.label}
+                  className="flex min-w-[132px] items-center gap-2"
+                >
+                  <div className="flex size-6 items-center justify-center rounded-md bg-muted/30 text-muted-foreground">
+                    <MetricIcon />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] leading-none text-muted-foreground">
+                      {metric.label}
+                    </div>
+                    <div className="mt-1 max-w-[150px] truncate text-sm font-semibold leading-none text-foreground">
+                      {metric.value}
+                    </div>
+                    <div className="mt-1 text-[10px] leading-none text-muted-foreground">
+                      {metric.note}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Total vendido */}
-        <Card className="border-slate-800 bg-gradient-to-br from-blue-950/50 to-slate-950/50 hover:border-blue-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Total vendido
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-400">
-              $
-              {data?.total?.toLocaleString("es-AR", {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              }) ?? 0}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">{periodLabel}</p>
-          </CardContent>
-        </Card>
-
-        {/* Órdenes */}
-        <Card className="border-slate-800 bg-gradient-to-br from-purple-950/50 to-slate-950/50 hover:border-purple-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Órdenes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-400">
-              {data?.count?.toLocaleString?.() ?? 0}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Transacciones completadas
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Promedio por ticket */}
-        <Card className="border-slate-800 bg-gradient-to-br from-green-950/50 to-slate-950/50 hover:border-green-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Promedio / Ticket
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-400">
-              $
-              {data?.avg?.toLocaleString("es-AR", {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              }) ?? 0}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Por cada transacción</p>
-          </CardContent>
-        </Card>
-
-        {/* Producto Top */}
-        <Card className="border-slate-800 bg-gradient-to-br from-orange-950/50 to-slate-950/50 hover:border-orange-700/50 transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-slate-300">
-              Producto Top
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-400 truncate">
-              {data?.topProduct?.name ?? "N/A"}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {data?.topProduct?.qty
-                ? `${data.topProduct.qty} unidades vendidas`
-                : "Sin datos"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Payment Method Breakdown */}
-      <div className="px-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-slate-700 hover:bg-slate-800 text-slate-300"
-          onClick={() => setShowPaymentBreakdown((v) => !v)}
-        >
-          {showPaymentBreakdown ? "Ocultar" : "Formas de Pago"}
-        </Button>
-      </div>
-      {showPaymentBreakdown && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-slate-800 bg-gradient-to-br from-emerald-950/50 to-slate-950/50 hover:border-emerald-700/50 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300">
-                Efectivo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-400">
-                $
-                {paymentData.cash.total.toLocaleString("es-AR", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-500">
-                  {paymentData.cash.count} orden
-                  {paymentData.cash.count !== 1 ? "es" : ""}
-                </span>
-                <span className="text-xs font-medium text-emerald-400/80">
-                  {paymentData.cash.pct}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-gradient-to-br from-sky-950/50 to-slate-950/50 hover:border-sky-700/50 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300">
-                Transferencia
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-sky-400">
-                $
-                {paymentData.transfer.total.toLocaleString("es-AR", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-500">
-                  {paymentData.transfer.count} orden
-                  {paymentData.transfer.count !== 1 ? "es" : ""}
-                </span>
-                <span className="text-xs font-medium text-sky-400/80">
-                  {paymentData.transfer.pct}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-gradient-to-br from-amber-950/50 to-slate-950/50 hover:border-amber-700/50 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-slate-300">
-                Otros (Tarjetas, QR)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-400">
-                $
-                {paymentData.other.total.toLocaleString("es-AR", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-500">
-                  {paymentData.other.count} orden
-                  {paymentData.other.count !== 1 ? "es" : ""}
-                </span>
-                <span className="text-xs font-medium text-amber-400/80">
-                  {paymentData.other.pct}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Detalles */}
-      <Card className="border-slate-800 bg-slate-950/50">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Detalles</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-slate-700 hover:bg-slate-800 text-slate-300"
-            onClick={handleExportCSV}
-          >
-            <IconDownload className="w-4 h-4 mr-1" />
-            Exportar CSV
-          </Button>
         </CardHeader>
-        <CardContent>
+
+        {showPaymentBreakdown && (
+          <div className="grid gap-2 border-b border-border/60 px-5 py-3 md:grid-cols-3">
+            {[paymentData.cash, paymentData.transfer, paymentData.other].map(
+              (item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between rounded-lg border border-border/50 bg-background/40 px-3 py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <IconClock className="text-muted-foreground" />
+                    <div>
+                      <div className="text-sm font-medium text-foreground">
+                        {item.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.count} comandas · {item.pct}%
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {formatMoney(item.total)}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        )}
+
+        <CardContent className="px-5 py-4">
           <DailyOrdersTable
             date={"date" in tableFilters ? tableFilters.date : undefined}
             from={"from" in tableFilters ? tableFilters.from : undefined}

@@ -10,6 +10,7 @@ import CostEngineRouter from "./routers/CostEngineRouter.ts";
 import StockRouter from "./routers/StockRouter.ts";
 import CashRegisterRouter from "./routers/CashRegisterRouter.ts";
 import ServiceRouter from "./routers/ServiceRouter.ts";
+import CustomerRouter from "./routers/CustomerRouter.ts";
 
 const app = express();
 app.use(cors());
@@ -30,6 +31,7 @@ app.use("/api", CostEngineRouter);
 app.use("/api", StockRouter);
 app.use("/api", CashRegisterRouter);
 app.use("/api", ServiceRouter);
+app.use("/api", CustomerRouter);
 
 const PORT = 3001;
 app.listen(PORT, () => {

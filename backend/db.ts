@@ -69,6 +69,7 @@ db.prepare(
   CREATE TABLE IF NOT EXISTS payment_methods (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    code TEXT,
     active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
@@ -82,15 +83,175 @@ db.prepare(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     table_number INTEGER,
     shift TEXT CHECK (shift IN ('morning','afternoon')) NOT NULL,
-    status TEXT CHECK (status IN ('open','paid','cancelled')) DEFAULT 'open',
+    status TEXT CHECK (status IN ('open','debt','paid','cancelled')) DEFAULT 'open',
     discount_percentage REAL DEFAULT 0,
     total_amount REAL NOT NULL,
     payment_method_id INTEGER REFERENCES payment_methods(id),
+    customer_id INTEGER REFERENCES customers(id),
     notes TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
 `,
 ).run();
+
+try {
+  const paymentMethodCols = db.prepare("PRAGMA table_info(payment_methods)").all() as Array<{ name: string }>;
+  if (!paymentMethodCols.some(col => col.name === "code")) {
+    db.prepare("ALTER TABLE payment_methods ADD COLUMN code TEXT").run();
+    console.log("Added 'code' column to payment_methods table");
+  }
+} catch (error) {
+  console.log("Migration note (payment_methods.code):", error);
+}
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    phone TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT
+  )
+`).run();
+
+try {
+  const orderCols = db.prepare("PRAGMA table_info(orders)").all() as Array<{ name: string }>;
+  if (!orderCols.some(col => col.name === "customer_id")) {
+    db.prepare("ALTER TABLE orders ADD COLUMN customer_id INTEGER REFERENCES customers(id)").run();
+    console.log("Added 'customer_id' column to orders table");
+  }
+} catch (error) {
+  console.log("Migration note (orders.customer_id):", error);
+}
+
+try {
+  const table = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'orders'")
+    .get() as { sql?: string } | undefined;
+
+  if (table?.sql && !table.sql.includes("'debt'")) {
+    const hasOrderItems = Boolean(
+      db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'order_items'").get(),
+    );
+    const hasStockMovements = Boolean(
+      db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stock_movements'").get(),
+    );
+
+    db.prepare("PRAGMA foreign_keys = OFF").run();
+    db.transaction(() => {
+      if (hasOrderItems) {
+        db.prepare("ALTER TABLE order_items RENAME TO order_items_old_debt_migration").run();
+      }
+      if (hasStockMovements) {
+        db.prepare("ALTER TABLE stock_movements RENAME TO stock_movements_old_debt_migration").run();
+      }
+
+      db.prepare("ALTER TABLE orders RENAME TO orders_old_debt_migration").run();
+      db.prepare(`
+        CREATE TABLE orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_number INTEGER,
+          shift TEXT CHECK (shift IN ('morning','afternoon')) NOT NULL,
+          status TEXT CHECK (status IN ('open','debt','paid','cancelled')) DEFAULT 'open',
+          discount_percentage REAL DEFAULT 0,
+          total_amount REAL NOT NULL,
+          payment_method_id INTEGER REFERENCES payment_methods(id),
+          customer_id INTEGER REFERENCES customers(id),
+          notes TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+      db.prepare(`
+        INSERT INTO orders (
+          id, table_number, shift, status, discount_percentage,
+          total_amount, payment_method_id, customer_id, notes, created_at
+        )
+        SELECT
+          id, table_number, shift, status, discount_percentage,
+          total_amount, payment_method_id, customer_id, notes, created_at
+        FROM orders_old_debt_migration
+      `).run();
+
+      if (hasOrderItems) {
+        db.prepare(`
+          CREATE TABLE order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+            menu_item_id INTEGER REFERENCES menu_items(id),
+            quantity REAL NOT NULL,
+            unit_price REAL NOT NULL,
+            subtotal REAL NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(order_id, menu_item_id)
+          )
+        `).run();
+        db.prepare(`
+          INSERT INTO order_items (
+            id, order_id, menu_item_id, quantity, unit_price, subtotal, created_at
+          )
+          SELECT id, order_id, menu_item_id, quantity, unit_price, subtotal, created_at
+          FROM order_items_old_debt_migration
+        `).run();
+        db.prepare("DROP TABLE order_items_old_debt_migration").run();
+      }
+
+      if (hasStockMovements) {
+        db.prepare(`
+          CREATE TABLE stock_movements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stock_product_id INTEGER NOT NULL REFERENCES stock_products(id) ON DELETE CASCADE,
+            quantity_change INTEGER NOT NULL,
+            previous_stock INTEGER NOT NULL,
+            new_stock INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        db.prepare(`
+          INSERT INTO stock_movements (
+            id, stock_product_id, quantity_change, previous_stock,
+            new_stock, reason, order_id, created_at
+          )
+          SELECT
+            id, stock_product_id, quantity_change, previous_stock,
+            new_stock, reason, order_id, created_at
+          FROM stock_movements_old_debt_migration
+        `).run();
+        db.prepare("DROP TABLE stock_movements_old_debt_migration").run();
+      }
+
+      db.prepare("DROP TABLE orders_old_debt_migration").run();
+    })();
+    db.prepare("PRAGMA foreign_keys = ON").run();
+    console.log("Updated orders.status check to include debt");
+  }
+} catch (error) {
+  try {
+    db.prepare("PRAGMA foreign_keys = ON").run();
+  } catch {}
+  console.log("Migration note (orders.status debt):", error);
+}
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS customer_account_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    payment_method_id INTEGER REFERENCES payment_methods(id),
+    amount_paid REAL NOT NULL,
+    discount_amount REAL NOT NULL DEFAULT 0,
+    discount_percentage REAL NOT NULL DEFAULT 0,
+    payment_date TEXT NOT NULL,
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
+
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_customer_account_payments_customer ON customer_account_payments(customer_id)`).run();
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_customer_account_payments_date ON customer_account_payments(payment_date)`).run();
 
 // Tabla de items de la orden (productos en la orden)
 db.prepare(
@@ -120,6 +281,24 @@ db.prepare(
     ('QR')
 `,
 ).run();
+
+db.prepare(`
+  INSERT OR IGNORE INTO payment_methods (name, code)
+  VALUES ('Cuenta corriente', 'account')
+`).run();
+
+db.prepare(`
+  UPDATE payment_methods
+  SET code = CASE
+    WHEN name = 'Efectivo' THEN 'cash'
+    WHEN name = 'Transferencia' THEN 'transfer'
+    WHEN name = 'QR' OR name = 'CÃ³digo QR' OR name = 'Código QR' THEN 'qr_code'
+    WHEN name = 'Cuenta corriente' THEN 'account'
+    WHEN name LIKE '%Tarjeta%' OR name LIKE '%DÃ©bito%' OR name LIKE '%Débito%' OR name LIKE '%Credito%' OR name LIKE '%CrÃ©dito%' OR name LIKE '%Crédito%' THEN 'card'
+    ELSE code
+  END
+  WHERE code IS NULL OR code = ''
+`).run();
 
 // ============================================
 // MÓDULO COST-ENGINE - Esquema de Base de Datos

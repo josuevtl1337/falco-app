@@ -10,6 +10,7 @@ const FinancePage = lazy(() => import("@/modules/finance/index"));
 const MenuPage = lazy(() => import("@/modules/menu/index"));
 const CalibrationPage = lazy(() => import("@/modules/calibration/index"));
 const OrdersPage = lazy(() => import("@/modules/hall/index"));
+const CustomersPage = lazy(() => import("@/modules/customers/index"));
 const CostEnginePage = lazy(() => import("@/modules/cost-engine/index"));
 const StockPage = lazy(() => import("@/modules/stock/index"));
 
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: "menu", element: <MenuPage /> },
       { path: "calibration", element: <CalibrationPage /> },
       { path: "create-order", element: <OrdersPage /> },
+      { path: "customers", element: <CustomersPage /> },
       { path: "cost-engine", element: <CostEnginePage /> },
       { path: "stock-control", element: <StockPage /> },
       { path: "*", element: <div className="p-6">No encontrado</div> },

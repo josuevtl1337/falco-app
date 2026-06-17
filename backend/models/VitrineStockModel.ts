@@ -176,7 +176,7 @@ export const VitrineStockModel = {
          JOIN order_items oi ON oi.menu_item_id = vsim.menu_item_id
          JOIN orders o ON o.id = oi.order_id
          WHERE vsi.active = 1
-           AND o.status = 'paid'
+           AND o.status IN ('debt', 'paid')
            AND o.created_at >= ?
          GROUP BY vsim.vitrine_stock_item_id`
       )

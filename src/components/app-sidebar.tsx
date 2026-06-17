@@ -7,6 +7,7 @@ import {
   IconHome,
   IconListDetails,
   IconPackage,
+  IconUsersGroup,
   IconReportMoney,
 } from "@tabler/icons-react";
 
@@ -46,6 +47,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Salon",
         url: RoutePaths.createOrder,
         icon: IconListDetails,
+      },
+      {
+        title: "Clientes",
+        url: RoutePaths.customers,
+        icon: IconUsersGroup,
       },
       {
         title: "Carta",

@@ -20,6 +20,7 @@ interface OrderCartProps {
   onCommand: () => void;
   onSave: () => void;
   onPay: () => void;
+  onAssignToAccount: () => void;
   onPrint: () => void;
   isReadyToPay: boolean;
   isRegisterOpen: boolean;
@@ -35,6 +36,7 @@ function OrderCart({
   onCommand,
   onSave,
   onPay,
+  onAssignToAccount,
   onPrint,
   isReadyToPay,
   isRegisterOpen,
@@ -164,14 +166,24 @@ function OrderCart({
 
         {/* Print button */}
         {isReadyToPay && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPrint}
-            className="w-full mb-2 text-xs border-[var(--card-border)] text-gray-300"
-          >
-            Imprimir Ticket
-          </Button>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrint}
+              className="text-xs border-[var(--card-border)] text-gray-300"
+            >
+              Imprimir
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAssignToAccount}
+              className="text-xs border-[var(--card-border)] text-gray-300"
+            >
+              A cuenta
+            </Button>
+          </div>
         )}
 
         <div className="flex gap-2">
