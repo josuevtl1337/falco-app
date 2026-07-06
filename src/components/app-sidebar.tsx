@@ -27,6 +27,7 @@ import { RoutePaths } from "@/routes/paths";
 import { useTheme } from "@/modules/commons/theme/theme-provider";
 import StockAlertBadge from "@/modules/stock/components/stock-alert-badge";
 import { NavLink } from "react-router-dom";
+import SyncStatus from "@/components/sync-status";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setTheme, theme } = useTheme();
@@ -112,6 +113,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavDocuments items={data.documents} />
+        <SyncStatus />
         {/* Footer */}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

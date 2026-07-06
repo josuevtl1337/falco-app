@@ -40,7 +40,7 @@
     "skipLibCheck": true,
 
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "module": "ESNext",
     "target": "ESNext",
     "emitDeclarationOnly": false,

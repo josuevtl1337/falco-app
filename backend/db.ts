@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { initializeSyncDatabase } from "./sync/migrations.ts";
 
 const db: any = new Database("app.db");
 
@@ -940,6 +941,10 @@ db.prepare(
        SELECT 1 FROM service_payments sp WHERE sp.service_id = services.id
      )`,
 ).run();
+
+// Sync infrastructure is initialized after all legacy tables exist. Its migrations are
+// additive and never make connectivity a requirement for local operations.
+initializeSyncDatabase(db);
 
 /**
  * Returns the current timestamp in Buenos Aires timezone (America/Argentina/Buenos_Aires).

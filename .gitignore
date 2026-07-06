@@ -2,6 +2,7 @@ node_modules/
 dist/
 .vite/
 *.log
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
@@ -18,6 +19,7 @@ backend/*.db
 
 # backups (si los tenés)
 backups/
+supabase/.temp/
 
 # reports
 reports/
