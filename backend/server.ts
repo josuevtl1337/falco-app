@@ -1,3 +1,4 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import CalibrationRouter from "./routers/CalibrationRouter.ts";
@@ -11,8 +12,12 @@ import StockRouter from "./routers/StockRouter.ts";
 import CashRegisterRouter from "./routers/CashRegisterRouter.ts";
 import ServiceRouter from "./routers/ServiceRouter.ts";
 import CustomerRouter from "./routers/CustomerRouter.ts";
+import db from "./db.ts";
+import { SyncWorker } from "./sync/worker.ts";
+import { createSyncRouter } from "./routers/SyncRouter.ts";
 
 const app = express();
+const syncWorker = new SyncWorker(db);
 app.use(cors());
 app.use(express.json());
 app.set("etag", false);
@@ -32,10 +37,12 @@ app.use("/api", StockRouter);
 app.use("/api", CashRegisterRouter);
 app.use("/api", ServiceRouter);
 app.use("/api", CustomerRouter);
+app.use("/api", createSyncRouter(syncWorker));
 
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
 });
+syncWorker.start();
 
 export default app;
