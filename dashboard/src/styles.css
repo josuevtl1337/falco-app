@@ -148,6 +148,99 @@ nav button.active:before {
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
+.period-panel {
+  margin: -14px 0 22px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(182, 60, 46, 0.08), transparent 42%),
+    var(--card);
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.period-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+.period-panel__title > svg {
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  border-radius: 50%;
+  background: #efe7da;
+  color: var(--accent);
+}
+.period-panel__title span,
+.period-panel__controls label,
+.period-panel__advanced label {
+  display: block;
+  font: 500 0.62rem DM Mono;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.period-panel__title strong {
+  display: block;
+  margin-top: 1px;
+  font: 600 0.98rem Fraunces;
+}
+.period-panel__controls {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.period-panel__day input {
+  min-width: 150px;
+  border-color: #d9b9af;
+  background: #fff7ed;
+}
+.period-panel__primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.period-panel__primary:hover {
+  background: #9f3328;
+}
+.period-panel__controls label,
+.period-panel__advanced label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.period-panel__controls input,
+.period-panel__advanced input {
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf1;
+  color: var(--ink);
+  padding: 0 10px;
+  font: 500 0.78rem Manrope;
+  outline: none;
+}
+.period-panel__controls input:focus,
+.period-panel__advanced input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #b63c2e18;
+}
+.period-panel__advanced {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
 .button {
   border: 0;
   border-radius: 7px;
@@ -268,8 +361,180 @@ td {
 tbody tr:hover {
   background: #f5f0e7;
 }
+.muted-cell {
+  color: var(--muted);
+}
+.vitrine-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 520px;
+  white-space: normal;
+}
+.vitrine-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #e0d8ca;
+  border-radius: 10px;
+  background: #f7f1e7;
+  color: var(--ink);
+  padding: 4px 7px;
+  font: 500 0.68rem Manrope;
+}
+.vitrine-pill strong {
+  font-weight: 600;
+}
+.vitrine-pill span {
+  color: var(--success);
+}
+.vitrine-pill em {
+  color: #8a5a20;
+  font-style: normal;
+}
+.vitrine-pill--diff {
+  border-color: #e8b9ad;
+  background: #f5ddd7;
+  color: #7d2b22;
+}
+.vitrine-pill--diff span {
+  color: #7d2b22;
+}
 .data-card .card__content {
   padding-top: 8px;
+}
+.finance-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.finance-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #e9e2d6;
+}
+.finance-tabs button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.finance-tabs button.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(25, 24, 21, 0.08);
+}
+.finance-tabs span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: white;
+  font-size: 0.68rem;
+}
+.finance-period {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--muted);
+}
+.finance-period strong {
+  font: 600 1.08rem Fraunces;
+  color: var(--ink);
+}
+.finance-period span {
+  font-size: 0.78rem;
+}
+.finance-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.finance-metric {
+  position: relative;
+  min-height: 150px;
+}
+.finance-metric:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.46));
+}
+.finance-metric .card__title {
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+}
+.finance-metric .card__content span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.finance-metric--income {
+  border-color: #b9c9ea;
+  background: #f4f7ff;
+}
+.finance-metric--expense {
+  border-color: #e7b8ae;
+  background: #fff4f1;
+}
+.finance-metric--profit {
+  border-color: #afd5c0;
+  background: #f2fbf5;
+}
+.finance-metric--margin {
+  border-color: #d7c2ed;
+  background: #faf5ff;
+}
+.finance-report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.9fr);
+  gap: 16px;
+}
+.finance-chart-card .card__content,
+.finance-ranking-card .card__content {
+  padding-top: 8px;
+}
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ranking-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #e6dfd3;
+  border-radius: 10px;
+  background: #f7f2e9;
+}
+.ranking-row span {
+  font: 600 0.72rem DM Mono;
+  color: var(--accent);
+}
+.ranking-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ranking-row em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.78rem;
+}
+.ranking-row b {
+  font-size: 0.86rem;
 }
 .empty {
   padding: 60px 20px;
@@ -382,6 +647,67 @@ tbody tr:hover {
   color: var(--accent);
   margin: 0;
 }
+.admin-write-stack {
+  display: grid;
+  gap: 18px;
+}
+.write-card {
+  background:
+    linear-gradient(135deg, rgba(217, 99, 81, 0.08), transparent 36%),
+    var(--card);
+}
+.write-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+}
+.write-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.write-form input,
+.write-form select {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  font: 500 0.95rem Inter, sans-serif;
+  padding: 0 12px;
+  outline: none;
+}
+.write-form input:focus,
+.write-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(217, 99, 81, 0.14);
+}
+.write-form__wide {
+  grid-column: span 2;
+}
+.write-message {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.request-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+}
+.request-status small {
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @keyframes shimmer {
   to {
     background-position: -200%;
@@ -406,8 +732,25 @@ tbody tr:hover {
   .metrics {
     grid-template-columns: repeat(2, 1fr);
   }
+  .finance-metrics,
+  .finance-report-grid {
+    grid-template-columns: 1fr;
+  }
   .workspace {
     padding: 28px 22px;
+  }
+  .period-panel {
+    grid-template-columns: 1fr;
+  }
+  .period-panel__controls,
+  .period-panel__advanced {
+    justify-content: flex-start;
+  }
+  .write-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .write-form__wide {
+    grid-column: span 2;
   }
   .login {
     grid-template-columns: 1fr;
@@ -441,5 +784,11 @@ tbody tr:hover {
   }
   .grid {
     grid-template-columns: 1fr;
+  }
+  .write-form {
+    grid-template-columns: 1fr;
+  }
+  .write-form__wide {
+    grid-column: auto;
   }
 }

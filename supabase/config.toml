@@ -5,3 +5,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.sync-health]
 verify_jwt = false
+[functions.device-pull-requests]
+verify_jwt = false
+[functions.device-ack-request]
+verify_jwt = false

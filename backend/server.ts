@@ -13,11 +13,13 @@ import CashRegisterRouter from "./routers/CashRegisterRouter.ts";
 import ServiceRouter from "./routers/ServiceRouter.ts";
 import CustomerRouter from "./routers/CustomerRouter.ts";
 import db from "./db.ts";
+import { AdminRequestWorker } from "./sync/admin-requests.ts";
 import { SyncWorker } from "./sync/worker.ts";
 import { createSyncRouter } from "./routers/SyncRouter.ts";
 
 const app = express();
 const syncWorker = new SyncWorker(db);
+const adminRequestWorker = new AdminRequestWorker(db);
 app.use(cors());
 app.use(express.json());
 app.set("etag", false);
@@ -44,5 +46,6 @@ app.listen(PORT, () => {
   console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
 });
 syncWorker.start();
+adminRequestWorker.start();
 
 export default app;
