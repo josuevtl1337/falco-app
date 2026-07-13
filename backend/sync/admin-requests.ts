@@ -28,6 +28,14 @@ type PullResponse = {
   stock_adjustment_requests?: StockAdjustmentRequest[];
 };
 
+type AdminRequestReceipt = {
+  request_type: "expense" | "stock_adjustment";
+  request_id: string;
+  status: "applied" | "rejected";
+  local_public_id: string | null;
+  error_message: string | null;
+};
+
 export class AdminRequestWorker {
   private timer?: NodeJS.Timeout;
   private running = false;
@@ -36,7 +44,9 @@ export class AdminRequestWorker {
     private readonly db: Db,
     private readonly config: SyncConfig = syncConfig,
     private readonly fetchImpl: typeof fetch = fetch,
-  ) {}
+  ) {
+    this.ensureReceiptTable();
+  }
 
   start(): void {
     if (!this.config.enabled) return;
@@ -90,6 +100,18 @@ export class AdminRequestWorker {
   }
 
   private async applyExpense(request: ExpenseRequest): Promise<void> {
+    const existing = this.receiptFor("expense", request.id);
+    if (existing) {
+      await this.ack(
+        "expense",
+        request.id,
+        existing.status,
+        existing.local_public_id,
+        existing.error_message ?? undefined,
+      );
+      return;
+    }
+
     try {
       const localPublicId = this.db.transaction(() => {
         const result = ReportModel.addExpense({
@@ -98,11 +120,17 @@ export class AdminRequestWorker {
           description: request.description ?? "",
           date: request.expense_date,
         });
-        return this.publicIdFor("report_expenses", Number(result.lastInsertRowid));
+        const publicId = this.publicIdFor(
+          "report_expenses",
+          Number(result.lastInsertRowid),
+        );
+        this.saveReceipt("expense", request.id, "applied", publicId);
+        return publicId;
       })();
       await this.ack("expense", request.id, "applied", localPublicId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      this.saveReceipt("expense", request.id, "rejected", null, message);
       await this.ack("expense", request.id, "rejected", null, message);
     }
   }
@@ -110,6 +138,18 @@ export class AdminRequestWorker {
   private async applyStockAdjustment(
     request: StockAdjustmentRequest,
   ): Promise<void> {
+    const existing = this.receiptFor("stock_adjustment", request.id);
+    if (existing) {
+      await this.ack(
+        "stock_adjustment",
+        request.id,
+        existing.status,
+        existing.local_public_id,
+        existing.error_message ?? undefined,
+      );
+      return;
+    }
+
     try {
       const localPublicId = this.db.transaction(() => {
         const product = this.db
@@ -151,11 +191,19 @@ export class AdminRequestWorker {
              LIMIT 1`,
           )
           .get(product.id) as { public_id: string | null } | undefined;
-        return movement?.public_id ?? null;
+        const publicId = movement?.public_id ?? null;
+        this.saveReceipt(
+          "stock_adjustment",
+          request.id,
+          "applied",
+          publicId,
+        );
+        return publicId;
       })();
       await this.ack("stock_adjustment", request.id, "applied", localPublicId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      this.saveReceipt("stock_adjustment", request.id, "rejected", null, message);
       await this.ack("stock_adjustment", request.id, "rejected", null, message);
     }
   }
@@ -197,6 +245,63 @@ export class AdminRequestWorker {
       .prepare(`SELECT public_id FROM ${table} WHERE id = ?`)
       .get(id) as { public_id: string | null } | undefined;
     return row?.public_id ?? null;
+  }
+
+  private ensureReceiptTable(): void {
+    this.db
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS admin_request_receipts (
+          request_type TEXT NOT NULL,
+          request_id TEXT NOT NULL,
+          status TEXT NOT NULL,
+          local_public_id TEXT,
+          error_message TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (request_type, request_id)
+        )`,
+      )
+      .run();
+  }
+
+  private receiptFor(
+    requestType: "expense" | "stock_adjustment",
+    requestId: string,
+  ): AdminRequestReceipt | null {
+    return (
+      (this.db
+        .prepare(
+          `SELECT request_type,request_id,status,local_public_id,error_message
+           FROM admin_request_receipts
+           WHERE request_type = ? AND request_id = ?`,
+        )
+        .get(requestType, requestId) as AdminRequestReceipt | undefined) ?? null
+    );
+  }
+
+  private saveReceipt(
+    requestType: "expense" | "stock_adjustment",
+    requestId: string,
+    status: "applied" | "rejected",
+    localPublicId: string | null,
+    errorMessage = "",
+  ): void {
+    this.db
+      .prepare(
+        `INSERT INTO admin_request_receipts
+          (request_type, request_id, status, local_public_id, error_message)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(request_type, request_id) DO UPDATE SET
+          status = excluded.status,
+          local_public_id = excluded.local_public_id,
+          error_message = excluded.error_message`,
+      )
+      .run(
+        requestType,
+        requestId,
+        status,
+        localPublicId,
+        errorMessage ? errorMessage.slice(0, 500) : null,
+      );
   }
 
   private deviceHeaders(): Record<string, string> {
